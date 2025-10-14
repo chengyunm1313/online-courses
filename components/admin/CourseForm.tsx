@@ -28,6 +28,7 @@ export interface CourseFormInitialValues {
     duration: number;
     order: number;
     videoUrl?: string;
+    preview?: boolean;
   }[];
   modules?: {
     id: string;
@@ -295,7 +296,7 @@ export default function CourseForm({
       return;
     }
 
-    const sanitizedModules: SanitizedModule[] = modules
+    const sanitizedModules = modules
       .map((module, moduleIndex) => {
         const sanitizedLessons: SanitizedLesson[] = module.lessons
           .map((lesson, lessonIndex) => {
@@ -330,7 +331,7 @@ export default function CourseForm({
           lessons: sanitizedLessons,
         };
       })
-      .filter((module): module is SanitizedModule => module !== null);
+      .filter(Boolean) as unknown as SanitizedModule[];
 
     if (sanitizedModules.length === 0) {
       setError("請至少新增一個章節並包含一堂課程內容");

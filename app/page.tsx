@@ -3,6 +3,8 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import { getFeaturedCourses } from "@/lib/public-courses";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const featuredCourses = await getFeaturedCourses(6);
 

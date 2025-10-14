@@ -68,8 +68,9 @@ function normalizeSyllabusLessons(rawSyllabus: unknown): ModuleLessonBase[] {
     return [];
   }
 
-  return rawSyllabus
-    .map((lesson, index) => {
+  return (
+    rawSyllabus
+      .map((lesson, index) => {
       if (typeof lesson !== "object" || lesson === null) {
         return null;
       }
@@ -103,9 +104,10 @@ function normalizeSyllabusLessons(rawSyllabus: unknown): ModuleLessonBase[] {
             ? lessonRecord.videoUrl.trim()
             : undefined,
         preview: Boolean(lessonRecord.preview),
-      } satisfies ModuleLessonBase;
-    })
-    .filter((lesson): lesson is ModuleLessonBase => Boolean(lesson))
+        } satisfies ModuleLessonBase;
+      })
+      .filter(Boolean) as ModuleLessonBase[]
+  )
     .sort((a, b) => a.order - b.order)
     .map((lesson, index) => ({
       ...lesson,
@@ -115,16 +117,18 @@ function normalizeSyllabusLessons(rawSyllabus: unknown): ModuleLessonBase[] {
 
 function normalizeModules(rawModules: unknown, rawSyllabus: unknown): ModuleBase[] {
   if (Array.isArray(rawModules)) {
-    const modules = rawModules
-      .map((module, moduleIndex) => {
+    const modules = (
+      rawModules
+        .map((module, moduleIndex) => {
         if (typeof module !== "object" || module === null) {
           return null;
         }
         const moduleRecord = module as Record<string, unknown>;
         const lessonsRaw = moduleRecord.lessons;
-        const lessons: ModuleLessonBase[] = Array.isArray(lessonsRaw)
-          ? lessonsRaw
-              .map((lesson, lessonIndex) => {
+        const lessons = Array.isArray(lessonsRaw)
+          ? (
+              lessonsRaw
+                .map((lesson, lessonIndex) => {
                 if (typeof lesson !== "object" || lesson === null) {
                   return null;
                 }
@@ -159,13 +163,14 @@ function normalizeModules(rawModules: unknown, rawSyllabus: unknown): ModuleBase
                       : undefined,
                   preview: Boolean(lessonRecord.preview),
                 } satisfies ModuleLessonBase;
-              })
-              .filter((lesson): lesson is ModuleLessonBase => Boolean(lesson))
-              .sort((a, b) => a.order - b.order)
-              .map((lesson, index) => ({
-                ...lesson,
-                order: index + 1,
-              }))
+                })
+                .filter(Boolean) as ModuleLessonBase[]
+            )
+                .sort((a, b) => a.order - b.order)
+                .map((lesson, index) => ({
+                  ...lesson,
+                  order: index + 1,
+                }))
           : [];
 
         if (!lessons.length && typeof moduleRecord.title !== "string") {
@@ -193,8 +198,9 @@ function normalizeModules(rawModules: unknown, rawSyllabus: unknown): ModuleBase
           order: orderValue,
           lessons,
         } satisfies ModuleBase;
-      })
-      .filter((module): module is ModuleBase => Boolean(module))
+        })
+        .filter(Boolean) as ModuleBase[]
+    )
       .sort((a, b) => a.order - b.order)
       .map((module, index) => ({
         ...module,
@@ -327,7 +333,7 @@ export async function getLearningCoursesForUser(
 
   const courseMap = await fetchCourses(enrollments.map((item) => item.courseId));
 
-  return enrollments
+  const mapped = enrollments
     .map((enrollment) => {
       const course = courseMap.get(enrollment.courseId);
       if (!course) return null;
@@ -386,9 +392,11 @@ export async function getLearningCoursesForUser(
         nextLessonId: nextLesson?.id,
         nextLessonTitle: nextLesson?.title,
       } satisfies LearningCourse;
-    })
-    .filter((item): item is LearningCourse => item !== null)
-    .sort(
+    });
+
+  const list = mapped.filter((item) => item !== null) as LearningCourse[];
+
+  return list.sort(
       (a, b) =>
         new Date(b.lastAccessed).getTime() - new Date(a.lastAccessed).getTime()
     );

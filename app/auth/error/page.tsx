@@ -1,11 +1,11 @@
 import Link from "next/link";
 
-export default function AuthError({
+export default async function AuthError({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const error = searchParams.error;
+  const { error } = await searchParams;
 
   const errorMessages: Record<string, string> = {
     Configuration: "伺服器配置錯誤，請聯絡管理員。",
