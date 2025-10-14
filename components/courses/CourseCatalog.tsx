@@ -293,7 +293,7 @@ export default function CourseCatalog({ courses }: CourseCatalogProps) {
                 >
                   <div className="relative h-44 w-full overflow-hidden">
                     <Image
-                      src={course.thumbnail}
+                      src={course.thumbnail || "/placeholder-course.jpg"}
                       alt={course.title}
                       fill
                       className="object-cover transition duration-300 group-hover:scale-105"

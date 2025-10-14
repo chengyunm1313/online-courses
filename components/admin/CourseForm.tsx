@@ -300,12 +300,14 @@ export default function CourseForm({
         const sanitizedLessons: SanitizedLesson[] = module.lessons
           .map((lesson, lessonIndex) => {
             const durationNum = Number(lesson.duration);
+            const trimmedDescription = lesson.description?.trim();
+            const trimmedVideoUrl = lesson.videoUrl?.trim();
             return {
               id: lesson.id || `lesson-${moduleIndex + 1}-${lessonIndex + 1}`,
               title: lesson.title.trim(),
-              description: lesson.description.trim() || undefined,
+              description: trimmedDescription || undefined,
               duration: Number.isFinite(durationNum) ? Math.max(durationNum, 0) : 0,
-              videoUrl: lesson.videoUrl.trim() || undefined,
+              videoUrl: trimmedVideoUrl || undefined,
               preview: Boolean(lesson.preview),
             };
           })
@@ -319,10 +321,11 @@ export default function CourseForm({
           return null;
         }
 
+        const trimmedModuleDescription = module.description?.trim();
         return {
           id: module.id || `module-${moduleIndex + 1}`,
           title: module.title.trim() || `章節 ${moduleIndex + 1}`,
-          description: module.description.trim() || undefined,
+          description: trimmedModuleDescription || undefined,
           order: moduleIndex + 1,
           lessons: sanitizedLessons,
         };
@@ -583,8 +586,7 @@ export default function CourseForm({
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-medium text-gray-600">章節描述</label>
-                        <input
-                          type="text"
+                        <textarea
                           value={module.description}
                           onChange={(event) =>
                             updateModuleField(
@@ -593,6 +595,7 @@ export default function CourseForm({
                               event.target.value
                             )
                           }
+                          rows={3}
                           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="此章節主要學習重點"
                         />
@@ -655,12 +658,12 @@ export default function CourseForm({
                           </div>
                           <div className="space-y-1">
                             <label className="text-xs font-medium text-gray-600">描述</label>
-                            <input
-                              type="text"
+                            <textarea
                               value={lesson.description}
                               onChange={(event) =>
                                 updateLessonField(moduleIndex, lessonIndex, "description", event.target.value)
                               }
+                              rows={3}
                               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                               placeholder="說明本堂課內容"
                             />

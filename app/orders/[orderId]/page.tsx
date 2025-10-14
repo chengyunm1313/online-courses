@@ -52,7 +52,7 @@ function paymentMethodLabel(method: string) {
 export default async function OrderDetailPage({
   params,
 }: {
-  params: { orderId: string };
+  params: Promise<{ orderId: string }>;
 }) {
   const session = await getServerSession(authOptions);
 
@@ -60,7 +60,8 @@ export default async function OrderDetailPage({
     redirect("/auth/test");
   }
 
-  const order = await getOrderById(params.orderId);
+  const resolvedParams = await params;
+  const order = await getOrderById(resolvedParams.orderId);
 
   if (!order) {
     redirect("/orders");
