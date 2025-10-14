@@ -185,7 +185,7 @@ function normalizeSyllabusArray(rawSyllabus: unknown): AdminCourseLesson[] {
     return [];
   }
 
-  const lessons = rawSyllabus
+  const lessonsMapped = rawSyllabus
     .map((lesson, lessonIndex) => {
       if (typeof lesson !== "object" || lesson === null) {
         return null;
@@ -214,18 +214,23 @@ function normalizeSyllabusArray(rawSyllabus: unknown): AdminCourseLesson[] {
         title: titleValue,
         description:
           typeof lessonData.description === "string"
-            ? lessonData.description.trim() || undefined
-            : undefined,
+            ? lessonData.description.trim() || ""
+            : "",
         duration: Number.isFinite(durationValue) ? Math.max(durationValue, 0) : 0,
         order: orderValue,
         videoUrl:
           typeof lessonData.videoUrl === "string" && lessonData.videoUrl.trim()
             ? lessonData.videoUrl.trim()
-            : undefined,
+            : "",
         preview: Boolean(lessonData.preview),
       } satisfies AdminCourseLesson;
-    })
-    .filter((lesson): lesson is AdminCourseLesson => Boolean(lesson?.id && lesson.title))
+    });
+
+  const lessonsFiltered = lessonsMapped.filter((lesson) =>
+    Boolean(lesson?.id && lesson.title),
+  ) as AdminCourseLesson[];
+
+  const lessons = lessonsFiltered
     .sort((a, b) => a.order - b.order)
     .map((lesson, index) => ({
       ...lesson,
@@ -247,7 +252,7 @@ function normalizeModuleArray(rawModules: unknown): AdminCourseModule[] {
       }
       const moduleData = module as Record<string, unknown>;
       const lessonsRaw = moduleData.lessons;
-      const lessons: AdminCourseLesson[] = Array.isArray(lessonsRaw)
+      const lessons = Array.isArray(lessonsRaw)
         ? lessonsRaw
             .map((lesson, lessonIndex) => {
               if (typeof lesson !== "object" || lesson === null) {
@@ -272,18 +277,18 @@ function normalizeModuleArray(rawModules: unknown): AdminCourseModule[] {
                 title: rawTitle,
                 description:
                   typeof lessonData.description === "string"
-                    ? lessonData.description.trim() || undefined
-                    : undefined,
+                    ? lessonData.description.trim() || ""
+                    : "",
                 duration: Number.isFinite(durationValue) ? Math.max(durationValue, 0) : 0,
                 order: orderValue,
                 videoUrl:
                   typeof lessonData.videoUrl === "string" && lessonData.videoUrl.trim()
                     ? lessonData.videoUrl.trim()
-                    : undefined,
+                    : "",
                 preview: Boolean(lessonData.preview),
               } satisfies AdminCourseLesson;
             })
-            .filter((lesson): lesson is AdminCourseLesson => Boolean(lesson?.id && lesson.title))
+            .filter((lesson) => Boolean(lesson?.id && lesson.title)) as AdminCourseLesson[]
         : [];
 
       const moduleTitle =
@@ -308,8 +313,8 @@ function normalizeModuleArray(rawModules: unknown): AdminCourseModule[] {
         title: moduleTitle || `章節 ${moduleIndex + 1}`,
         description:
           typeof moduleData.description === "string"
-            ? moduleData.description.trim() || undefined
-            : undefined,
+            ? moduleData.description.trim() || ""
+            : "",
         order: orderValue,
         lessons: lessons
           .sort((a, b) => a.order - b.order)
@@ -319,7 +324,7 @@ function normalizeModuleArray(rawModules: unknown): AdminCourseModule[] {
           })),
       } satisfies AdminCourseModule;
     })
-    .filter((module): module is AdminCourseModule => Boolean(module));
+    .filter((module) => Boolean(module)) as AdminCourseModule[];
 
   return modules
     .sort((a, b) => a.order - b.order)
@@ -764,7 +769,7 @@ function normalizeCourseInput(input: AdminCourseInput) {
           {
             id: "module-1",
             title: "課程內容",
-            description: undefined,
+            description: "",
             order: 1,
             lessons: sanitizedSyllabus.map((lesson, index) => ({
               ...lesson,

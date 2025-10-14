@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import { getPublishedCourseById } from "@/lib/public-courses";
 import VideoEmbed from "@/components/VideoEmbed";
 import EnrollButton from "./EnrollButton";
+export const dynamic = "force-dynamic";
 import {
   getEnrollmentStatusForUser,
   touchEnrollmentLastAccessed,
@@ -86,9 +87,10 @@ function levelLabel(level: string) {
 export default async function CourseDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const course = await getPublishedCourseById(params.id);
+  const resolvedParams = await params;
+  const course = await getPublishedCourseById(resolvedParams.id);
 
   if (!course) {
     notFound();

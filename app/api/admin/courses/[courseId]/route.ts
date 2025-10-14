@@ -10,6 +10,21 @@ import {
   type AdminCourseModule,
 } from "@/lib/admin-data";
 
+/**
+ * 深度移除物件中的所有 undefined 值
+ * Firestore 不允許 undefined 值
+ * 使用 JSON 序列化來移除所有 undefined 值
+ */
+function removeUndefined<T>(obj: T): T {
+  // 使用 JSON.stringify 的 replacer 函數來移除 undefined
+  const jsonString = JSON.stringify(obj, (key, value) => {
+    // 保留 null，但移除 undefined
+    return value === undefined ? null : value;
+  });
+
+  return JSON.parse(jsonString) as T;
+}
+
 function normalizePayload(body: Record<string, unknown>): AdminCourseInput {
   const tagsRaw = body.tags;
   const tags = Array.isArray(tagsRaw)
@@ -103,7 +118,10 @@ export async function PATCH(
     const body = await request.json();
     const payload = normalizePayload(body ?? {});
 
-    const course = await updateCourseForManagement(resolvedParams.courseId, payload, context);
+    // 移除所有 undefined 值以符合 Firestore 要求
+    const cleanedPayload = removeUndefined(payload);
+
+    const course = await updateCourseForManagement(resolvedParams.courseId, cleanedPayload, context);
     return NextResponse.json({ course });
   } catch (error) {
     console.error("[admin-courses] PATCH error:", error);

@@ -74,16 +74,18 @@ function normalizeModules(
   fallbackSyllabus: CourseSyllabus[],
 ): CourseModule[] {
   if (Array.isArray(value)) {
-    const modules = value
-      .map((module, moduleIndex) => {
+    const modules = (
+      value
+        .map((module, moduleIndex) => {
         if (typeof module !== "object" || module === null) {
           return null;
         }
         const moduleRecord = module as Record<string, unknown>;
         const rawLessons = moduleRecord.lessons;
-        const lessons: CourseModuleItem[] = Array.isArray(rawLessons)
-          ? rawLessons
-              .map((lesson, lessonIndex) => {
+        const lessons = Array.isArray(rawLessons)
+          ? (
+              rawLessons
+                .map((lesson, lessonIndex) => {
                 if (typeof lesson !== "object" || lesson === null) {
                   return null;
                 }
@@ -119,7 +121,8 @@ function normalizeModules(
                   preview: Boolean(lessonRecord.preview),
                 } satisfies CourseModuleItem;
               })
-              .filter((lesson): lesson is CourseModuleItem => Boolean(lesson?.title))
+              .filter(Boolean) as CourseModuleItem[]
+            )
               .sort((a, b) => a.order - b.order)
               .map((lesson, index) => ({
                 ...lesson,
@@ -152,8 +155,9 @@ function normalizeModules(
           order: orderValue,
           lessons,
         } satisfies CourseModule;
-      })
-      .filter((module): module is CourseModule => Boolean(module))
+        })
+        .filter(Boolean) as CourseModule[]
+    )
       .sort((a, b) => a.order - b.order)
       .map((module, index) => ({
         ...module,

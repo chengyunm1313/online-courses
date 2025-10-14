@@ -28,3 +28,4 @@ export default async function CoursesPage() {
     </div>
   );
 }
+export const dynamic = "force-dynamic";

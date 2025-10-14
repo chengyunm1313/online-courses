@@ -5,6 +5,7 @@ import { getUserOrders } from "@/lib/orders";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
+import type { Order } from "@/types/order";
 
 export default async function OrdersPage() {
   const session = await getServerSession(authOptions);
@@ -14,7 +15,7 @@ export default async function OrdersPage() {
   }
 
   // 從 Firebase 獲取當前用戶的訂單
-  let userOrders = [];
+  let userOrders: Order[] = [];
   try {
     userOrders = await getUserOrders(session.user.id);
   } catch (error) {

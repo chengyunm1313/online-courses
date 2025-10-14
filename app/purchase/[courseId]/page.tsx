@@ -8,7 +8,7 @@ import PurchaseClient from "@/components/checkout/PurchaseClient";
 export default async function PurchasePage({
   params,
 }: {
-  params: { courseId: string };
+  params: Promise<{ courseId: string }>;
 }) {
   const session = await getServerSession(authOptions);
 
@@ -16,7 +16,8 @@ export default async function PurchasePage({
     redirect("/auth/test");
   }
 
-  const course = await getPublishedCourseById(params.courseId);
+  const resolvedParams = await params;
+  const course = await getPublishedCourseById(resolvedParams.courseId);
 
   if (!course) {
     redirect("/courses");

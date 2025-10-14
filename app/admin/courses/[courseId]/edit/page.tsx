@@ -8,11 +8,11 @@ import {
 } from "@/lib/admin-data";
 import CourseForm from "@/components/admin/CourseForm";
 
-interface AdminEditCoursePageProps {
-  params: { courseId: string };
-}
-
-export default async function AdminEditCoursePage({ params }: AdminEditCoursePageProps) {
+export default async function AdminEditCoursePage({
+  params,
+}: {
+  params: Promise<{ courseId: string }>;
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -23,8 +23,9 @@ export default async function AdminEditCoursePage({ params }: AdminEditCoursePag
     redirect("/");
   }
 
+  const resolvedParams = await params;
   const [course, instructorOptions] = await Promise.all([
-    getCourseForManagement(params.courseId, {
+    getCourseForManagement(resolvedParams.courseId, {
       role: session.user.role,
       userId: session.user.id,
     }),

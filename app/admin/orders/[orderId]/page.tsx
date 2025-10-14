@@ -46,7 +46,7 @@ const statusLabel: Record<string, string> = {
 export default async function AdminOrderDetailPage({
   params,
 }: {
-  params: { orderId: string };
+  params: Promise<{ orderId: string }>;
 }) {
   const session = await getServerSession(authOptions);
 
@@ -58,7 +58,8 @@ export default async function AdminOrderDetailPage({
     redirect("/admin");
   }
 
-  const order = await getOrderById(params.orderId);
+  const resolvedParams = await params;
+  const order = await getOrderById(resolvedParams.orderId);
 
   if (!order) {
     redirect("/admin/orders");

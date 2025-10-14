@@ -6,28 +6,29 @@ import { getPublishedCourseById } from "@/lib/public-courses";
 import { evaluateDiscount } from "@/lib/checkout";
 import CheckoutATM from "@/components/checkout/CheckoutATM";
 
-interface CheckoutPageProps {
-  params: { courseId: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}
-
 export default async function CheckoutATMPage({
   params,
-  searchParams = {},
-}: CheckoutPageProps) {
+  searchParams,
+}: {
+  params: Promise<{ courseId: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
     redirect("/auth/test");
   }
 
-  const course = await getPublishedCourseById(params.courseId);
+  const resolvedParams = await params;
+  const course = await getPublishedCourseById(resolvedParams.courseId);
 
   if (!course) {
     redirect("/courses");
   }
 
-  const codeParam = typeof searchParams.code === "string" ? searchParams.code : undefined;
+  const resolvedSearch = (await searchParams) ?? {};
+  const codeParam =
+    typeof resolvedSearch.code === "string" ? resolvedSearch.code : undefined;
   const discountResult = evaluateDiscount(course.price, codeParam);
 
   const summary = {

@@ -5,28 +5,27 @@ import { authOptions } from "@/lib/auth";
 import { getCourseForManagement } from "@/lib/admin-data";
 import CourseForm from "@/components/admin/CourseForm";
 
-interface InstructorEditCoursePageProps {
-  params: { courseId: string };
-}
-
 export default async function InstructorEditCoursePage({
   params,
-}: InstructorEditCoursePageProps) {
+}: {
+  params: Promise<{ courseId: string }>;
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
     redirect("/auth/test");
   }
 
+  const resolvedParams = await params;
   if (session.user.role === "admin") {
-    redirect(`/admin/courses/${params.courseId}/edit`);
+    redirect(`/admin/courses/${resolvedParams.courseId}/edit`);
   }
 
   if (session.user.role !== "instructor") {
     redirect("/");
   }
 
-  const course = await getCourseForManagement(params.courseId, {
+  const course = await getCourseForManagement(resolvedParams.courseId, {
     role: session.user.role,
     userId: session.user.id,
   });
