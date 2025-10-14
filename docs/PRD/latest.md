@@ -1,27 +1,14 @@
-## 最新版本摘要（v0.1.2 / 2025-10-14）
+## 最新版本摘要（v0.1.3 / 2025-10）
 
 ### 本次重點
-- **資料驗證修復**：解決 Firestore 無法接受 `undefined` 值的錯誤，修改課程資料正規化邏輯，將所有 `undefined` 改為空字串 `""`。
-- **使用體驗優化**：
-  - 章節描述與課程描述欄位改為多行 textarea，提升長文字編輯體驗。
-  - 課程縮圖新增預留圖片機制，避免空字串導致的載入錯誤。
-  - 網站標題與描述更新為繁體中文，提升 SEO 與本地化體驗。
-- **Next.js 15 相容性**：修復訂單詳情頁面的 params 型別問題，確保動態路由正常運作。
+- 章節模組化導入學習流程：
+  - 課程詳情頁依會員狀態切換 CTA，已購會員可直接播放所有章節並顯示「已完成 / 下一堂課」等狀態。
+  - 我的學習頁顯示章節列表、完成統計與「前往章節」連結。
+- 首頁新增 Demo 警示 Banner，提升 Demo 範本辨識度。
+- 可及性提升：搜尋欄位與下拉選單提升文字顏色對比度。
+- 文件同步：README、PRD 文件更新章節結構與使用指引。
 
-### 修復的問題
-| 問題 | 影響範圍 | 狀態 |
-| --- | --- | --- |
-| Firestore undefined 值錯誤 | `/admin/courses` 建立/編輯課程 | ✅ 已修復 |
-| 訂單詳情頁 404 錯誤 | `/orders/[orderId]`, `/admin/orders/[orderId]` | ✅ 已修復 |
-| 空白縮圖圖片錯誤 | `/courses` 課程列表 | ✅ 已修復 |
-
-### 重要修改檔案
-- `lib/admin-data.ts` - 修改資料正規化邏輯
-- `components/admin/CourseForm.tsx` - 改善表單輸入體驗
-- `app/layout.tsx` - 更新網站元資料
-- `components/courses/CourseCatalog.tsx` - 新增縮圖預留機制
-- `app/admin/orders/[orderId]/page.tsx` - 修復 params 型別
-- `app/orders/[orderId]/page.tsx` - 修復 params 型別
-
-> 詳細資訊請參考 [`prd-v0.1.2.md`](./prd-v0.1.2.md)。
-> 若需查看舊版需求，可參考 [`prd-v0.1.md`](./prd-v0.1.md)。
+### 相關文件
+- 詳細說明：[`prd-v0.1.3.md`](./prd-v0.1.3.md)
+- 上一版：[`prd-v0.1.2.md`](./prd-v0.1.2.md)
+- 初版：[`prd-v0.1.md`](./prd-v0.1.md)

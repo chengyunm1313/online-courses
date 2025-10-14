@@ -149,7 +149,7 @@ export default function CourseCatalog({ courses }: CourseCatalogProps) {
           <select
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value)}
-            className="rounded-md border-gray-300 bg-white px-3 py-1.5 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-md border-gray-300 bg-white px-3 py-1.5 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
           >
             {sortOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -171,7 +171,7 @@ export default function CourseCatalog({ courses }: CourseCatalogProps) {
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="搜尋課程標題、描述或標籤..."
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-600 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
