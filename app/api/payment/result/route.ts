@@ -62,9 +62,11 @@ export async function POST(request: NextRequest) {
     console.log('[Payment Result] 接收到的完整參數:', JSON.stringify(params, null, 2));
 
     // 詳細調試：輸出用於簽章計算的參數及其值
+    // 重要：與 generateCheckMacValue 中的過濾邏輯保持一致
+    // 包含空字符串，只排除 undefined 和 CheckMacValue
     const filteredForSignature: Record<string, string | number> = {};
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '' && key !== 'CheckMacValue') {
+      if (value !== undefined && key !== 'CheckMacValue') {
         filteredForSignature[key] = value;
       }
     });
