@@ -8,40 +8,6 @@ import {
 import type { ECPayData } from '@/types/ecpay';
 
 /**
- * 安全地構造重定向 URL，確保在各種 Next.js 上下文中都能正常工作
- */
-function getRedirectUrl(request: NextRequest, path: string): string {
-  // 優先使用 request.nextUrl 的原點
-  let origin = request.nextUrl.origin;
-
-  // 如果原點無效，嘗試從 request.url 提取
-  if (!origin || origin === 'null') {
-    try {
-      const parsedUrl = new URL(request.url);
-      origin = `${parsedUrl.protocol}//${parsedUrl.host}`;
-    } catch {
-      // 最後的備用方案 - 使用環境變數或預設值
-      origin = process.env.APP_BASE_URL || 'http://localhost:3000';
-    }
-  }
-
-  // 確保 origin 是有效的字符串
-  if (typeof origin !== 'string' || !origin) {
-    origin = process.env.APP_BASE_URL || 'http://localhost:3000';
-  }
-
-  // 安全地構造 URL
-  try {
-    return new URL(path, origin).toString();
-  } catch {
-    // 備用：簡單的字符串拼接
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
-    return `${normalizedOrigin}${normalizedPath}`;
-  }
-}
-
-/**
  * POST /api/payment/result
  * 接收綠界的前端導回，驗證並重定向到訂單詳情頁
  * 這是使用者瀏覽器發送的請求（從綠界支付頁面返回）
@@ -63,7 +29,8 @@ export async function POST(request: NextRequest) {
 
     if (!merchantTradeNo) {
       console.warn('[Payment Result] 缺少商家交易編號');
-      return NextResponse.redirect(getRedirectUrl(request, '/?payment=missing'), { status: 307 });
+      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+      return NextResponse.redirect(`${baseUrl}/?payment=missing`, { status: 307 });
     }
 
     console.log('[Payment Result] 收到支付結果:', {
@@ -129,7 +96,8 @@ export async function POST(request: NextRequest) {
 
     if (orderSnapshot.empty) {
       console.error('[Payment Result] 找不到訂單:', merchantTradeNo);
-      return NextResponse.redirect(getRedirectUrl(request, '/?payment=not-found'), { status: 307 });
+      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+      return NextResponse.redirect(`${baseUrl}/?payment=not-found`, { status: 307 });
     }
 
     const orderDoc = orderSnapshot.docs[0];
