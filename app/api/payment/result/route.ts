@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         calculated: calculatedCheckMacValue,
       });
       const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-      const redirectUrl = new URL('/?payment=invalid', baseUrl);
+      const redirectUrl = new URL(`/?payment=invalid`, baseUrl);
       return NextResponse.redirect(redirectUrl.toString());
     }
 
