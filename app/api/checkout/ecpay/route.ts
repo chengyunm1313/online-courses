@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     const merchantTradeNo = generateMerchantTradeNo();
 
     // 建立訂單到 Firestore
-    const orderData = {
+    const orderData: Record<string, unknown> = {
       userId: session.user.id,
       userName: session.user.name || '',
       userEmail: session.user.email || '',
@@ -80,10 +80,14 @@ export async function POST(request: NextRequest) {
       paymentMethod,
       shippingMethod,
       merchantTradeNo,
-      notes,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+
+    // 只在 notes 有值時才添加
+    if (notes) {
+      orderData.notes = notes;
+    }
 
     const orderRef = await adminDb.collection('orders').add(orderData);
     const orderId = orderRef.id;
