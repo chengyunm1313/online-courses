@@ -108,6 +108,16 @@ export function generateCheckMacValue(
     console.log('[ECPay 簽章] 步驟 6-8：加密與轉換完成', {
       signature: finalSignature,
     });
+
+    // 詳細診斷日誌：顯示完整的簽章計算過程
+    console.log('[ECPay 簽章] 完整計算過程:', {
+      filteredParamCount: sortedKeys.length,
+      parameterString: paramString,
+      rawString: rawString,
+      encodedString: encodedString,
+      lowerCaseString: lowerCaseString,
+      finalSignature: finalSignature,
+    });
   }
 
   return finalSignature;
