@@ -30,7 +30,11 @@ export async function POST(request: NextRequest) {
     if (!merchantTradeNo) {
       console.warn('[Payment Result] 缺少商家交易編號');
       const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-      return NextResponse.redirect(`${baseUrl}/?payment=missing`, { status: 307 });
+      const missingUrl = `${baseUrl}/?payment=missing`;
+      return new Response(
+        `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${missingUrl}"></head><body></body></html>`,
+        { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+      );
     }
 
     console.log('[Payment Result] 收到支付結果:', {
@@ -78,11 +82,14 @@ export async function POST(request: NextRequest) {
         received: receivedCheckMacValue,
         calculated: calculatedCheckMacValue,
       });
-      // 使用絕對簡單的重定向 - 只用字串拼接
+      // 返回 HTML 重定向而不是 NextResponse.redirect() 以避免 Next.js 內部錯誤
       const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
       const invalidUrl = `${baseUrl}/?payment=invalid`;
       console.log('[Payment Result] 重定向到無效支付頁:', invalidUrl);
-      return NextResponse.redirect(invalidUrl, { status: 307 });
+      return new Response(
+        `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${invalidUrl}"></head><body></body></html>`,
+        { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+      );
     }
 
     console.log('[Payment Result] ✓ CheckMacValue 驗證成功');
@@ -97,7 +104,11 @@ export async function POST(request: NextRequest) {
     if (orderSnapshot.empty) {
       console.error('[Payment Result] 找不到訂單:', merchantTradeNo);
       const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-      return NextResponse.redirect(`${baseUrl}/?payment=not-found`, { status: 307 });
+      const notFoundUrl = `${baseUrl}/?payment=not-found`;
+      return new Response(
+        `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${notFoundUrl}"></head><body></body></html>`,
+        { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+      );
     }
 
     const orderDoc = orderSnapshot.docs[0];
@@ -174,13 +185,19 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
     const successUrl = `${baseUrl}${redirectPath}`;
     console.log('[Payment Result] 重定向到訂單詳情頁:', successUrl);
-    return NextResponse.redirect(successUrl, { status: 307 });
+    return new Response(
+      `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${successUrl}"></head><body></body></html>`,
+      { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
   } catch (error) {
     console.error('[Payment Result Error]', error);
     // 使用簡單的字串拼接，避免 URL 構造問題
     const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
     const errorUrl = `${baseUrl}/?payment=error`;
     console.log('[Payment Result] 處理錯誤，重定向到:', errorUrl);
-    return NextResponse.redirect(errorUrl, { status: 307 });
+    return new Response(
+      `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${errorUrl}"></head><body></body></html>`,
+      { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
   }
 }
