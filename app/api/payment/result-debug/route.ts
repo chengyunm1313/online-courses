@@ -82,9 +82,21 @@ export async function POST(request: NextRequest) {
       console.log(`【方式：${method.name}】`);
       console.log(`排序後的鍵 (${sortedKeys.length}個):`);
       console.log(sortedKeys.join(', '));
+      console.log(`\n原始字串長度: ${rawString.length}`);
+      console.log(`URL編碼後長度: ${encoded.length}`);
+      console.log(`轉小寫後長度: ${lowercase.length}`);
       console.log(`\n計算的簽章: ${sig}`);
       console.log(`接收的簽章: ${params.CheckMacValue}`);
       console.log(`匹配: ${isMatch ? '✅ 是' : '❌ 否'}`);
+
+      // 如果還有其他診斷信息
+      if (method.name === '標準 ASCII (a < b)') {
+        console.log(`\n🔍 詳細信息：`);
+        console.log(`  參數字串: ${paramString.substring(0, 200)}...`);
+        console.log(`  原始字串: ${rawString.substring(0, 200)}...`);
+        console.log(`  URL編碼: ${encoded.substring(0, 200)}...`);
+      }
+
       console.log('───────────────────────────────────────────────────────────\n');
     }
 

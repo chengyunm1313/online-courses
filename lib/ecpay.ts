@@ -26,14 +26,30 @@ export function getECPayConfig(): ECPayConfig {
  * ECPay 專用 URL Encode
  * 根據官方規範 (tech-ecpay.md FN-002)，只有 5 個字符需要轉換
  * 參考：https://developers.ecpay.com.tw/
+ *
+ * 關鍵規則：
+ * 1. 首先使用標準 encodeURIComponent
+ * 2. 還原以下字符（ECPay 不編碼這些）：! ( ) *
+ * 3. 空格編碼為 +
+ * 4. 其他字符（如 &, =, /, :, .) 需要保持編碼狀態
  */
 function urlEncodeForECPay(str: string): string {
-  return encodeURIComponent(str)
-    .replace(/%20/g, '+')
-    .replace(/%21/g, '!')
-    .replace(/%28/g, '(')
-    .replace(/%29/g, ')')
-    .replace(/%2A/gi, '*');
+  // 步驟 1：標準 URL 編碼
+  let encoded = encodeURIComponent(str);
+
+  // 步驟 2：還原 ECPay 不編碼的字符
+  // 注意：ECPay 保持這些字符為原始形式
+  encoded = encoded
+    .replace(/%21/g, '!')      // ! 不編碼
+    .replace(/%28/g, '(')      // ( 不編碼
+    .replace(/%29/g, ')')      // ) 不編碼
+    .replace(/%2A/g, '*')      // * 不編碼
+    .replace(/%2a/g, '*');     // * 不編碼（小寫）
+
+  // 步驟 3：空格編碼為 +
+  encoded = encoded.replace(/%20/g, '+');
+
+  return encoded;
 }
 
 /**
