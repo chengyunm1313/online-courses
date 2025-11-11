@@ -61,13 +61,21 @@ export default function AdminOrdersPage() {
   });
 
   const getStatusBadge = (status: OrderStatus) => {
-    const styles = {
+    const styles: Record<string, string> = {
+      PAID: "bg-green-100 text-green-800",
+      CREATED: "bg-yellow-100 text-yellow-800",
+      FAILED: "bg-red-100 text-red-800",
+      CANCELED: "bg-red-100 text-red-800",
       completed: "bg-green-100 text-green-800",
       pending: "bg-yellow-100 text-yellow-800",
       cancelled: "bg-red-100 text-red-800",
       refunded: "bg-gray-100 text-gray-800",
     };
-    const labels = {
+    const labels: Record<string, string> = {
+      PAID: "已付款",
+      CREATED: "待處理",
+      FAILED: "付款失敗",
+      CANCELED: "已取消",
       completed: "已完成",
       pending: "處理中",
       cancelled: "已取消",

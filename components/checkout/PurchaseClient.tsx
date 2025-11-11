@@ -88,12 +88,37 @@ export default function PurchaseClient({ course }: PurchaseClientProps) {
     }
   };
 
-  const proceedToCheckout = () => {
-    const params = new URLSearchParams();
-    params.set("price", String(finalPrice));
-    if (appliedCode) params.set("code", appliedCode);
-    params.set("discount", String(discountAmount));
-    router.push(`/checkout/${course.id}/atm?${params.toString()}`);
+  const proceedToCheckout = async () => {
+    try {
+      setError(null);
+
+      // 將購物車資料存儲到 sessionStorage
+      const cartData = {
+        items: [
+          {
+            courseId: course.id,
+            courseTitle: course.title,
+            courseThumbnail: course.thumbnail,
+            price: finalPrice,
+            instructor: course.instructorName,
+          },
+        ],
+        paymentMethod: 'CREDIT',
+        shippingMethod: 'HOME',
+        subtotal: finalPrice,
+        tax: 0,
+        total: finalPrice,
+        notes: appliedCode ? `折扣碼: ${appliedCode}` : undefined,
+      };
+
+      sessionStorage.setItem('checkoutCart', JSON.stringify(cartData));
+
+      // 導向結帳頁面
+      router.push('/checkout/ecpay');
+    } catch (err) {
+      console.error('Error proceeding to checkout:', err);
+      setError('前往結帳時發生錯誤，請稍後重試。');
+    }
   };
 
   return (
@@ -181,15 +206,13 @@ export default function PurchaseClient({ course }: PurchaseClientProps) {
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
             <p className="font-semibold text-gray-800">付款方式</p>
-            <p className="mt-1">目前僅提供 ATM 轉帳：</p>
-            <ul className="mt-2 space-y-1 text-gray-600">
-              <li>銀行：{defaultBankInfo.bankName}</li>
-              <li>銀行代碼：{defaultBankInfo.bankCode}</li>
-              <li>帳戶名稱：{defaultBankInfo.accountName}</li>
-              <li>帳號：{defaultBankInfo.accountNumber}</li>
+            <p className="mt-1">結帳時可選擇以下方式：</p>
+            <ul className="mt-2 space-y-2 text-gray-600">
+              <li>💳 <strong>信用卡</strong> - 即時支付，支援分期付款</li>
+              <li>🏦 <strong>ATM 轉帳</strong> - 銀行轉帳，轉帳完成後核帳</li>
             </ul>
-            <p className="mt-2 text-xs text-gray-500">
-              匯款完成後請於結帳頁點擊「確認匯款」完成購買。
+            <p className="mt-3 text-xs text-gray-500 bg-blue-50 p-2 rounded">
+              ℹ️ 您可在結帳頁面選擇您偏好的付款方式。所有交易透過綠界金流加密處理，確保安全。
             </p>
           </div>
 
