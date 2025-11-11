@@ -8,32 +8,37 @@ import {
 import type { ECPayData } from '@/types/ecpay';
 
 /**
- * 使用 request.nextUrl 安全地構造重定向 URL
+ * 安全地構造重定向 URL，確保在各種 Next.js 上下文中都能正常工作
  */
 function getRedirectUrl(request: NextRequest, path: string): string {
-  const origin = request.nextUrl.origin;
-  console.log('[Payment Result] getRedirectUrl debug:', {
-    path,
-    origin,
-    originType: typeof origin,
-    nextUrl: request.nextUrl.toString(),
-  });
+  // 優先使用 request.nextUrl 的原點
+  let origin = request.nextUrl.origin;
 
+  // 如果原點無效，嘗試從 request.url 提取
   if (!origin || origin === 'null') {
-    console.error('[Payment Result] Origin 無效，嘗試使用 request.url');
     try {
-      const url = new URL(request.url);
-      const fallbackOrigin = `${url.protocol}//${url.host}`;
-      console.log('[Payment Result] 使用備用 origin:', fallbackOrigin);
-      return new URL(path, fallbackOrigin).toString();
-    } catch (e) {
-      console.error('[Payment Result] 無法構造備用 URL:', e);
-      return `http://localhost:3000${path}`;
+      const parsedUrl = new URL(request.url);
+      origin = `${parsedUrl.protocol}//${parsedUrl.host}`;
+    } catch {
+      // 最後的備用方案 - 使用環境變數或預設值
+      origin = process.env.APP_BASE_URL || 'http://localhost:3000';
     }
   }
 
-  const url = new URL(path, origin);
-  return url.toString();
+  // 確保 origin 是有效的字符串
+  if (typeof origin !== 'string' || !origin) {
+    origin = process.env.APP_BASE_URL || 'http://localhost:3000';
+  }
+
+  // 安全地構造 URL
+  try {
+    return new URL(path, origin).toString();
+  } catch {
+    // 備用：簡單的字符串拼接
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const normalizedOrigin = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+    return `${normalizedOrigin}${normalizedPath}`;
+  }
 }
 
 /**
