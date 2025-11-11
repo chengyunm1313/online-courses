@@ -16,7 +16,7 @@
 
 當 Next.js 的錯誤處理系統試圖處理支付結果重定向時，複雜的 URL 構造邏輯（使用 `new URL()` 構造器）在某些上下文中會失敗，因為 `origin` 值變成了無效的 `null` 或字串 `"null"`。
 
-## 解決方案
+## 解決方案進化過程
 
 ### 第一次嘗試（提交 5a7949d）
 改進 `getRedirectUrl()` 函式，新增多層防禦性編程：
@@ -26,7 +26,7 @@
 
 **結果**：仍然有問題，因為根本上依賴 URL 構造器
 
-### 最終解決方案（提交 7c0bb85）
+### 第二次嘗試（提交 7c0bb85）
 完全改變策略 - **不使用 URL 構造器，改用簡單的字串拼接**
 
 ```typescript
@@ -36,13 +36,33 @@ const redirectUrl = `${baseUrl}${path}`;
 return NextResponse.redirect(redirectUrl, { status: 307 });
 ```
 
-### 為什麼這能解決問題
+**結果**：仍然會遇到 Next.js 內部錯誤處理機制中的 Invalid URL 錯誤
 
-1. **不依賴 URL 構造器**：避免了會拋出 Invalid URL 的構造器
-2. **簡單字串拼接**：字符串連接總是安全的，不會拋出異常
-3. **環境變數支援**：透過 `APP_BASE_URL` 環境變數支援生產環境
-4. **一致的模式**：所有重定向路徑都使用相同的方式
-5. **無複雜邏輯**：消除了可能在 Next.js 錯誤上下文中失敗的複雜 try-catch 邏輯
+### 第三次嘗試（提交 00b29b6）
+移除未使用的 `getRedirectUrl()` 函式，清潔代碼。
+
+**結果**：錯誤仍然發生
+
+### 最終解決方案（提交 6f9f5fc）✅
+**完全繞過 Next.js 的重定向機制** - 使用 HTML `meta` 標籤進行客戶端重定向
+
+```typescript
+// 不使用 NextResponse.redirect()
+const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+const redirectUrl = `${baseUrl}${path}`;
+return new Response(
+  `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${redirectUrl}"></head><body></body></html>`,
+  { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+);
+```
+
+### 為什麼這能完全解決問題
+
+1. **繞過 Next.js 重定向機制**：不使用 `NextResponse.redirect()`，避免內部 URL 構造
+2. **HTML 客戶端重定向**：瀏覽器自動遵循 meta refresh 標籤
+3. **簡單字串拼接**：URL 構造仍然是簡單的字串連接
+4. **無複雜邏輯**：完全消除 Next.js 錯誤處理可能遇到的問題
+5. **完全相容**：所有瀏覽器都支援 meta refresh
 
 ## 涉及的檔案
 
@@ -50,37 +70,34 @@ return NextResponse.redirect(redirectUrl, { status: 307 });
 
 ## 修改的位置
 
-### 1. 簽章驗證失敗路徑
+所有重定向現在都使用相同的 HTML meta refresh 模式：
+
 ```typescript
-// 驗證失敗時的重定向
+// HTML meta refresh 重定向模式
 const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-const invalidUrl = `${baseUrl}/?payment=invalid`;
-return NextResponse.redirect(invalidUrl, { status: 307 });
+const redirectUrl = `${baseUrl}${path}`;
+return new Response(
+  `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=${redirectUrl}"></head><body></body></html>`,
+  { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+);
 ```
 
-### 2. 成功路徑
-```typescript
-// 成功時的重定向
-const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-const successUrl = `${baseUrl}/order/${orderId}/result`;
-return NextResponse.redirect(successUrl, { status: 307 });
-```
-
-### 3. 錯誤處理路徑
-```typescript
-// 例外時的重定向
-const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-const errorUrl = `${baseUrl}/?payment=error`;
-return NextResponse.redirect(errorUrl, { status: 307 });
-```
+適用於：
+- 簽章驗證失敗 (`/?payment=invalid`)
+- 成功路徑 (`/order/{id}/result`)
+- 缺少商家交易編號 (`/?payment=missing`)
+- 找不到訂單 (`/?payment=not-found`)
+- 錯誤處理 (`/?payment=error`)
 
 ## 提交歷史
 
 | 提交 | 描述 |
 | --- | --- |
-| 5a7949d | 改進 URL 構造函式的防禦性編程（部分解決） |
-| 7c0bb85 | 使用簡單字串拼接而非 URL 構造器（完全解決） |
-| e60f233 | 更新文檔以反映最終解決方案 |
+| 5a7949d | 改進 URL 構造函式的防禦性編程（初步嘗試） |
+| 7c0bb85 | 使用簡單字串拼接而非 URL 構造器（改進方案） |
+| 00b29b6 | 移除未使用的 getRedirectUrl() 函式（清潔代碼） |
+| e60f233 | 更新文檔以反映最終解決方案（部分） |
+| 6f9f5fc | 使用 HTML meta refresh 而非 NextResponse.redirect()（最終解決方案）✅ |
 
 ## 測試驗證
 
