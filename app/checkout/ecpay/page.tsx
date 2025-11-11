@@ -123,7 +123,8 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || '結帳失敗');
+        const errorMsg = data.detailedError ? `${data.error}: ${data.detailedError}` : (data.error || '結帳失敗');
+        throw new Error(errorMsg);
       }
 
       const contentType = response.headers.get('content-type');
