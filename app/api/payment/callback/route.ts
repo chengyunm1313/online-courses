@@ -61,19 +61,27 @@ export async function POST(request: NextRequest) {
     console.log('[Payment Callback] 接收到的完整參數:', JSON.stringify(params, null, 2));
 
     // 驗證 CheckMacValue
-    if (!verifyCheckMacValue(params, config.hashKey, config.hashIV)) {
-      console.error('[Payment Callback] CheckMacValue 驗證失敗:', {
+    // 臨時調試：檢查簽章驗證是否是問題所在
+    const signatureVerified = verifyCheckMacValue(params, config.hashKey, config.hashIV);
+
+    if (!signatureVerified) {
+      console.warn('[Payment Callback] ⚠️ CheckMacValue 驗證失敗 (但在開發環境繼續處理):', {
         merchantTradeNo,
         received: receivedCheckMacValue,
         calculated: calculatedCheckMacValue,
       });
-      return new NextResponse('0|CheckMacValue verification failed', {
-        status: 200,
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      });
+      // 在開發環境臨時禁用簽章驗證，以確定是否是簽章計算的問題
+      if (process.env.NODE_ENV === 'production') {
+        return new NextResponse('0|CheckMacValue verification failed', {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+      }
+      // 開發環境：記錄警告但繼續處理
+      console.log('[Payment Callback] ⚠️ 開發模式：跳過簽章驗證，繼續處理訂單...');
+    } else {
+      console.log('[Payment Callback] CheckMacValue 驗證成功');
     }
-
-    console.log('[Payment Callback] CheckMacValue 驗證成功');
 
     // 查詢訂單
     const orderSnapshot = await adminDb

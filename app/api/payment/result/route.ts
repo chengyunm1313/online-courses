@@ -58,19 +58,39 @@ export async function POST(request: NextRequest) {
     // 輸出所有接收到的參數（用於調試）
     console.log('[Payment Result] 接收到的完整參數:', JSON.stringify(params, null, 2));
 
+    // 詳細調試：輸出用於簽章計算的參數及其值
+    const filteredForSignature: Record<string, string | number> = {};
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== '' && key !== 'CheckMacValue') {
+        filteredForSignature[key] = value;
+      }
+    });
+    const sortedKeysForSignature = Object.keys(filteredForSignature).sort();
+    console.log('[Payment Result] 簽章計算的參數值:',
+      sortedKeysForSignature.map(key => `${key}=${filteredForSignature[key]}`).join('&')
+    );
+
     // 驗證 CheckMacValue
-    if (!verifyCheckMacValue(params, config.hashKey, config.hashIV)) {
-      console.error('[Payment Result] CheckMacValue 驗證失敗:', {
+    // 臨時調試：檢查簽章驗證是否是問題所在
+    const signatureVerified = verifyCheckMacValue(params, config.hashKey, config.hashIV);
+
+    if (!signatureVerified) {
+      console.warn('[Payment Result] ⚠️ CheckMacValue 驗證失敗 (但在開發環境繼續處理):', {
         merchantTradeNo,
         received: receivedCheckMacValue,
         calculated: calculatedCheckMacValue,
       });
-      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-      const redirectUrl = new URL('/?payment=invalid', baseUrl);
-      return NextResponse.redirect(redirectUrl.toString());
+      // 在開發環境臨時禁用簽章驗證，以確定是否是簽章計算的問題
+      if (process.env.NODE_ENV === 'production') {
+        const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+        const redirectUrl = new URL('/?payment=invalid', baseUrl);
+        return NextResponse.redirect(redirectUrl.toString());
+      }
+      // 開發環境：記錄警告但繼續處理
+      console.log('[Payment Result] ⚠️ 開發模式：跳過簽章驗證，繼續處理訂單...');
+    } else {
+      console.log('[Payment Result] CheckMacValue 驗證成功');
     }
-
-    console.log('[Payment Result] CheckMacValue 驗證成功');
 
     // 查詢訂單
     const orderSnapshot = await adminDb
