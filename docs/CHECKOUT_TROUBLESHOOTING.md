@@ -2,10 +2,34 @@
 
 ## 常見錯誤與解決方案
 
-### 1. "建立訂單失敗" (Failed to Create Order) 錯誤
+### 1. "Cannot use \"undefined\" as a Firestore value" 錯誤
 
 #### 症狀
-當點擊結帳按鈕時，顯示 "建立訂單失敗" 錯誤訊息。
+結帳時顯示錯誤：`建立訂單失敗: Value for argument "data" is not a valid Firestore document. Cannot use "undefined" as a Firestore value (found in field "notes")`
+
+#### 原因分析
+Firestore 不允許文檔欄位值為 `undefined`。當訂單備註（notes）為空時，該欄位被設置為 `undefined`，導致驗證失敗。
+
+#### 快速修復 ✅
+
+此錯誤已在版本 0.1.7 中修復。只需更新代碼：
+
+```bash
+git pull origin main
+npm install
+npm run build
+```
+
+**修復內容**：
+- 只有當 `notes` 有實際值時才將其添加到訂單文檔
+- 其他可選欄位也遵循相同模式
+
+---
+
+### 2. "建立訂單失敗" (Failed to Create Order) - 一般錯誤
+
+#### 症狀
+當點擊結帳按鈕時，顯示 "建立訂單失敗" 錯誤訊息（不包含具體的 Firestore 錯誤）。
 
 #### 原因分析
 此錯誤通常源自 `/api/checkout/ecpay` 路由的 catch 區塊。最常見的原因是：
@@ -13,6 +37,7 @@
 1. **缺少 ECPay 環境變數** ⚠️ 最常見
 2. Firebase 連接問題
 3. 用戶未登入
+4. Firestore 權限不足
 
 #### 快速修復 ✅
 
@@ -62,7 +87,7 @@ ECPAY_CASHIER_URL=https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5
 
 ---
 
-### 2. 結帳按鈕不顯示
+### 3. 結帳按鈕不顯示
 
 #### 症狀
 在購物車頁面上看不到結帳按鈕。
@@ -79,7 +104,7 @@ ECPAY_CASHIER_URL=https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5
 
 ---
 
-### 3. 重定向到綠界支付頁面失敗
+### 4. 重定向到綠界支付頁面失敗
 
 #### 症狀
 選擇信用卡支付後，頁面沒有重定向到綠界支付頁面。
@@ -114,7 +139,7 @@ npm run dev
 
 ---
 
-### 4. 購物車資料丟失
+### 5. 購物車資料丟失
 
 #### 症狀
 導航到結帳頁面時，購物車資料顯示為空。
@@ -163,7 +188,7 @@ window.location.href = '/checkout/ecpay'
 
 ---
 
-### 5. Firebase 權限或連接錯誤
+### 6. Firebase 權限或連接錯誤
 
 #### 症狀
 結帳失敗，並在伺服器日誌中看到 Firebase 相關錯誤。
