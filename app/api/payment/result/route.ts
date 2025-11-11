@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import {
   getECPayConfig,
   verifyCheckMacValue,
+  generateCheckMacValue,
 } from '@/lib/ecpay';
 import type { ECPayData } from '@/types/ecpay';
 
@@ -42,10 +43,27 @@ export async function POST(request: NextRequest) {
     // 取得 ECPay 設定
     const config = getECPayConfig();
 
+    // 詳細調試：檢查簽章驗證
+    const receivedCheckMacValue = String(params.CheckMacValue);
+    const calculatedCheckMacValue = generateCheckMacValue(params, config.hashKey, config.hashIV);
+
+    console.log('[Payment Result] 簽章驗證詳情:', {
+      merchantTradeNo,
+      receivedCheckMacValue,
+      calculatedCheckMacValue,
+      match: receivedCheckMacValue === calculatedCheckMacValue,
+      paramKeys: Object.keys(params).sort(),
+    });
+
+    // 輸出所有接收到的參數（用於調試）
+    console.log('[Payment Result] 接收到的完整參數:', JSON.stringify(params, null, 2));
+
     // 驗證 CheckMacValue
     if (!verifyCheckMacValue(params, config.hashKey, config.hashIV)) {
       console.error('[Payment Result] CheckMacValue 驗證失敗:', {
         merchantTradeNo,
+        received: receivedCheckMacValue,
+        calculated: calculatedCheckMacValue,
       });
       const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
       const redirectUrl = new URL('/?payment=invalid', baseUrl);

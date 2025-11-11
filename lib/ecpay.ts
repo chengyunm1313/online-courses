@@ -96,7 +96,17 @@ export function verifyCheckMacValue(
   }
 
   const calculatedCheckMacValue = generateCheckMacValue(params, hashKey, hashIV);
-  return receivedCheckMacValue === calculatedCheckMacValue;
+
+  // 詳細調試日誌
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[ECPay] 簽章驗證細節:', {
+      received: String(receivedCheckMacValue),
+      calculated: calculatedCheckMacValue,
+      match: String(receivedCheckMacValue) === calculatedCheckMacValue,
+    });
+  }
+
+  return String(receivedCheckMacValue) === calculatedCheckMacValue;
 }
 
 /**

@@ -270,12 +270,241 @@ NODE_ENV=development
 
 ---
 
+## CheckMacValue 簽章驗證詳細指南
+
+### 症狀
+- 支付完成後被重定向到 `/?payment=invalid`
+- 伺服器日誌中看到 `[Payment Result] CheckMacValue 驗證失敗`
+- API 返回 "CheckMacValue verification failed"
+
+### 簽章驗證的工作原理
+
+ECPay 使用 SHA256 簽章來確保訂單的完整性和安全性。簽章驗證分為三個階段：
+
+1. **Checkout 階段**（我們發送訂單到 ECPay）
+   - 我們根據訂單參數生成 CheckMacValue
+   - 將此值發送給 ECPay
+   - ECPay 驗證簽章正確性
+
+2. **支付階段**（用戶在 ECPay 頁面支付）
+   - ECPay 處理支付
+   - 生成支付結果
+
+3. **回調階段**（ECPay 返回結果）
+   - ECPay 使用相同的 HashKey/HashIV 生成新的簽章
+   - 我們接收參數並使用相同的算法重新計算簽章
+   - 對比雙方的簽章值
+
+### 詳細調試步驟
+
+**步驟 1：驗證環境變數**
+
+最常見的原因是 HashKey 或 HashIV 不正確。確保 `.env.local` 中的值：
+- 完全相同（區分大小寫）
+- 無前後空格
+- 使用測試環境的值
+
+```bash
+# .env.local 中必須完全如下
+ECPAY_HASH_KEY=5294y06JbISpM5x9
+ECPAY_HASH_IV=v77hoKGq4kWxNNIS
+```
+
+驗證：
+```bash
+grep "ECPAY_HASH" .env.local
+```
+
+**步驟 2：檢查完整的簽章日誌**
+
+伺服器會輸出詳細的簽章驗證過程。查找日誌：
+
+```
+[Checkout] 簽章詳情: {
+  merchantTradeNo: '20251111094114UHZXGY',
+  checkMacValue: '3F9B0A9C4FB36CAA...',  // ← 我們生成的簽章
+  paramKeys: ['ChoosePayment', 'ClientBackURL', ...]
+}
+
+[Payment Result] 簽章驗證詳情: {
+  merchantTradeNo: '20251111094114UHZXGY',
+  receivedCheckMacValue: '3F9B0A9C4FB36CAA...',  // ← ECPay 發送的簽章
+  calculatedCheckMacValue: '3F9B0A9C4FB36CAA...',  // ← 我們重新計算的簽章
+  match: true,  // ✓ 匹配成功
+  paramKeys: [...]
+}
+
+[Payment Result] 接收到的完整參數: {
+  "MerchantID": "2000132",
+  "MerchantTradeNo": "20251111094114UHZXGY",
+  "RtnCode": "1",
+  ...
+}
+```
+
+**三種可能的不匹配情況**：
+
+1. **`receivedCheckMacValue !== calculatedCheckMacValue`**
+   - ECPay 發送的簽章與我們計算的不符
+   - 可能原因：
+     - 接收到的參數與預期不同
+     - 參數解析出錯
+     - 參數順序問題
+
+   **調試**：
+   - 檢查 `接收到的完整參數` 中是否有預期外的字段
+   - 檢查參數值是否被正確轉換為字符串
+   - 確認沒有額外的空白字符
+
+2. **`match: false`（即使 ECPay 發送的簽章正確）**
+   - 我們的簽章算法生成了不同的值
+   - 可能原因：
+     - HashKey/HashIV 不正確 ⚠️ 最常見
+     - URL 編碼規則不同
+     - 字符編碼不是 UTF-8
+
+   **調試**：
+   - 重新檢查 `.env.local` 中的 HashKey/HashIV
+   - 確保環境變數已保存並伺服器已重啟
+   - 檢查是否有隱藏的空格或特殊字符
+
+3. **簽章值看起來很短或格式不對**
+   - 簽章應該是 64 個字符的十六進制字符串（SHA256）
+   - 如果格式不對，表示簽章生成失敗
+
+**步驟 3：手動測試簽章算法**
+
+建立文件 `/tmp/test-ecpay.js`：
+
+```javascript
+const crypto = require('crypto');
+
+function urlEncodeForECPay(str) {
+  return encodeURIComponent(str)
+    .replace(/%20/g, '+')
+    .replace(/%21/g, '!')
+    .replace(/%28/g, '(')
+    .replace(/%29/g, ')')
+    .replace(/%2A/gi, '*')
+    .replace(/%2D/g, '-')
+    .replace(/%2E/g, '.')
+    .replace(/%5F/g, '_')
+    .replace(/%7E/g, '~');
+}
+
+function generateCheckMacValue(params, hashKey, hashIV) {
+  const filtered = {};
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && key !== 'CheckMacValue') {
+      filtered[key] = value;
+    }
+  });
+
+  const sortedKeys = Object.keys(filtered).sort();
+  const paramString = sortedKeys
+    .map(key => `${key}=${filtered[key]}`)
+    .join('&');
+
+  const rawString = `HashKey=${hashKey}&${paramString}&HashIV=${hashIV}`;
+  console.log('Raw string:', rawString);
+
+  const encodedString = urlEncodeForECPay(rawString);
+  console.log('Encoded:', encodedString);
+
+  const lowerCaseString = encodedString.toLowerCase();
+  const hash = crypto
+    .createHash('sha256')
+    .update(lowerCaseString, 'utf8')
+    .digest('hex')
+    .toUpperCase();
+
+  return hash;
+}
+
+// 使用日誌中的完整參數測試
+const params = {
+  MerchantID: '2000132',
+  MerchantTradeNo: '20251111094114UHZXGY',
+  // 從日誌的 "接收到的完整參數" 複製所有字段
+  // ...
+};
+
+const result = generateCheckMacValue(
+  params,
+  '5294y06JbISpM5x9',  // HashKey
+  'v77hoKGq4kWxNNIS'   // HashIV
+);
+
+console.log('Generated:', result);
+console.log('Expected:', '3F9B0A9C4FB36CAA...'); // 從日誌中複製
+console.log('Match:', result === '3F9B0A9C4FB36CAA...');
+```
+
+執行：
+```bash
+node /tmp/test-ecpay.js
+```
+
+**步驟 4：對比簽章生成步驟**
+
+正確的簽章生成流程：
+
+1. **過濾參數**
+   - 移除 `CheckMacValue` 字段
+   - 移除 `undefined` 值
+
+2. **排序參數**
+   - 按鍵名字母順序排序（區分大小寫）
+   - A-Z 在 a-z 之前
+
+3. **組合字符串**
+   ```
+   HashKey=<hashKey>&key1=value1&key2=value2&HashIV=<hashIV>
+   ```
+
+4. **URL 編碼**（ECPay 專用規則）
+   - 使用標準 URL 編碼
+   - 然後恢復特殊字符：`=`, `&`, `/`, `:` 等
+
+5. **轉小寫**
+
+6. **SHA256 加密**
+
+7. **轉大寫**
+
+**步驟 5：重啟伺服器**
+
+確認所有變更後，重啟開發伺服器：
+
+```bash
+# 終止當前伺服器 (Ctrl+C)
+npm run dev
+```
+
+新的伺服器會讀取更新的 `.env.local` 文件。
+
+### 驗證清單
+
+在認為簽章問題已解決前，確保：
+
+- [ ] `.env.local` 中的 ECPAY_HASH_KEY 完全正確
+- [ ] `.env.local` 中的 ECPAY_HASH_IV 完全正確
+- [ ] 無前後空格或換行符
+- [ ] 使用的是**測試環境**的值（不是正式環境）
+- [ ] 開發伺服器已重啟
+- [ ] 瀏覽器快取已清除（F12 → Application → Storage → Clear all）
+- [ ] 伺服器日誌中的 `match: true`
+- [ ] 成功重定向到訂單確認頁面
+
+---
+
 ## 聯絡支持
 
 如果問題仍未解決：
 
-1. 收集完整的錯誤訊息和伺服器日誌
-2. 檢查 [ECPay 開發者文檔](https://developers.ecpay.com.tw/)
-3. 查閱 [Firebase 故障排除指南](https://firebase.google.com/docs/troubleshooting)
-4. 提交 issue 附加調試資訊
+1. 收集完整的伺服器日誌（包含簽章驗證詳情）
+2. 驗證 `.env.local` 中的 HashKey/HashIV（不要提交給他人）
+3. 檢查 [ECPay 開發者文檔](https://developers.ecpay.com.tw/)
+4. 查閱 [Firebase 故障排除指南](https://firebase.google.com/docs/troubleshooting)
+5. 提交 issue 附加調試資訊（隱藏敏感信息）
 

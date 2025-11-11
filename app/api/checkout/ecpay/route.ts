@@ -126,6 +126,12 @@ export async function POST(request: NextRequest) {
       config.hashIV
     );
 
+    console.log('[Checkout] 簽章詳情:', {
+      merchantTradeNo,
+      checkMacValue,
+      paramKeys: Object.keys(ecpayParams).sort(),
+    });
+
     // 將 CheckMacValue 加入參數
     const fullParams = {
       ...ecpayParams,
@@ -139,6 +145,7 @@ export async function POST(request: NextRequest) {
       orderId,
       merchantTradeNo,
       merchantId: config.merchantId,
+      totalParams: Object.keys(fullParams).length,
     });
 
     // 返回 HTML（自動提交）
