@@ -8,6 +8,35 @@ import {
 import type { ECPayData } from '@/types/ecpay';
 
 /**
+ * 使用 request.nextUrl 安全地構造重定向 URL
+ */
+function getRedirectUrl(request: NextRequest, path: string): string {
+  const origin = request.nextUrl.origin;
+  console.log('[Payment Result] getRedirectUrl debug:', {
+    path,
+    origin,
+    originType: typeof origin,
+    nextUrl: request.nextUrl.toString(),
+  });
+
+  if (!origin || origin === 'null') {
+    console.error('[Payment Result] Origin 無效，嘗試使用 request.url');
+    try {
+      const url = new URL(request.url);
+      const fallbackOrigin = `${url.protocol}//${url.host}`;
+      console.log('[Payment Result] 使用備用 origin:', fallbackOrigin);
+      return new URL(path, fallbackOrigin).toString();
+    } catch (e) {
+      console.error('[Payment Result] 無法構造備用 URL:', e);
+      return `http://localhost:3000${path}`;
+    }
+  }
+
+  const url = new URL(path, origin);
+  return url.toString();
+}
+
+/**
  * POST /api/payment/result
  * 接收綠界的前端導回，驗證並重定向到訂單詳情頁
  * 這是使用者瀏覽器發送的請求（從綠界支付頁面返回）
@@ -29,9 +58,7 @@ export async function POST(request: NextRequest) {
 
     if (!merchantTradeNo) {
       console.warn('[Payment Result] 缺少商家交易編號');
-      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-      const redirectUrl = new URL('/?payment=missing', baseUrl);
-      return NextResponse.redirect(redirectUrl.toString());
+      return NextResponse.redirect(getRedirectUrl(request, '/?payment=missing'), { status: 307 });
     }
 
     console.log('[Payment Result] 收到支付結果:', {
@@ -79,9 +106,7 @@ export async function POST(request: NextRequest) {
         received: receivedCheckMacValue,
         calculated: calculatedCheckMacValue,
       });
-      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-      const redirectUrl = new URL(`/?payment=invalid`, baseUrl);
-      return NextResponse.redirect(redirectUrl.toString());
+      return NextResponse.redirect(getRedirectUrl(request, '/?payment=invalid'), { status: 307 });
     }
 
     console.log('[Payment Result] ✓ CheckMacValue 驗證成功');
@@ -95,9 +120,7 @@ export async function POST(request: NextRequest) {
 
     if (orderSnapshot.empty) {
       console.error('[Payment Result] 找不到訂單:', merchantTradeNo);
-      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-      const redirectUrl = new URL('/?payment=not-found', baseUrl);
-      return NextResponse.redirect(redirectUrl.toString());
+      return NextResponse.redirect(getRedirectUrl(request, '/?payment=not-found'), { status: 307 });
     }
 
     const orderDoc = orderSnapshot.docs[0];
@@ -170,13 +193,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 重定向到訂單詳情頁
-    const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-    const redirectUrl = new URL(`/order/${orderId}/result`, baseUrl);
-    return NextResponse.redirect(redirectUrl.toString());
+    const redirectPath = `/order/${orderId}/result`;
+    console.log('[Payment Result] 重定向到訂單詳情頁:', redirectPath);
+    return NextResponse.redirect(getRedirectUrl(request, redirectPath), { status: 307 });
   } catch (error) {
     console.error('[Payment Result Error]', error);
-    const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
-    const redirectUrl = new URL('/?payment=error', baseUrl);
-    return NextResponse.redirect(redirectUrl.toString());
+    return NextResponse.redirect(getRedirectUrl(request, '/?payment=error'), { status: 307 });
   }
 }
