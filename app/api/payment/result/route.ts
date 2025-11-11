@@ -111,7 +111,11 @@ export async function POST(request: NextRequest) {
         received: receivedCheckMacValue,
         calculated: calculatedCheckMacValue,
       });
-      return NextResponse.redirect(getRedirectUrl(request, '/?payment=invalid'), { status: 307 });
+      // 使用絕對簡單的重定向 - 只用字串拼接
+      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+      const invalidUrl = `${baseUrl}/?payment=invalid`;
+      console.log('[Payment Result] 重定向到無效支付頁:', invalidUrl);
+      return NextResponse.redirect(invalidUrl, { status: 307 });
     }
 
     console.log('[Payment Result] ✓ CheckMacValue 驗證成功');
@@ -199,10 +203,16 @@ export async function POST(request: NextRequest) {
 
     // 重定向到訂單詳情頁
     const redirectPath = `/order/${orderId}/result`;
-    console.log('[Payment Result] 重定向到訂單詳情頁:', redirectPath);
-    return NextResponse.redirect(getRedirectUrl(request, redirectPath), { status: 307 });
+    const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+    const successUrl = `${baseUrl}${redirectPath}`;
+    console.log('[Payment Result] 重定向到訂單詳情頁:', successUrl);
+    return NextResponse.redirect(successUrl, { status: 307 });
   } catch (error) {
     console.error('[Payment Result Error]', error);
-    return NextResponse.redirect(getRedirectUrl(request, '/?payment=error'), { status: 307 });
+    // 使用簡單的字串拼接，避免 URL 構造問題
+    const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+    const errorUrl = `${baseUrl}/?payment=error`;
+    console.log('[Payment Result] 處理錯誤，重定向到:', errorUrl);
+    return NextResponse.redirect(errorUrl, { status: 307 });
   }
 }
