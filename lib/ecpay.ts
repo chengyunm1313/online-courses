@@ -24,7 +24,8 @@ export function getECPayConfig(): ECPayConfig {
 
 /**
  * ECPay 專用 URL Encode
- * 需要將某些字符轉換回未編碼的形式
+ * 根據官方規範 (tech-ecpay.md FN-002)，只有 5 個字符需要轉換
+ * 參考：https://developers.ecpay.com.tw/
  */
 function urlEncodeForECPay(str: string): string {
   return encodeURIComponent(str)
@@ -32,11 +33,7 @@ function urlEncodeForECPay(str: string): string {
     .replace(/%21/g, '!')
     .replace(/%28/g, '(')
     .replace(/%29/g, ')')
-    .replace(/%2A/gi, '*')
-    .replace(/%2D/g, '-')
-    .replace(/%2E/g, '.')
-    .replace(/%5F/g, '_')
-    .replace(/%7E/g, '~');
+    .replace(/%2A/gi, '*');
 }
 
 /**
@@ -56,12 +53,15 @@ export function generateCheckMacValue(
     }
   });
 
-  // 2. 依照鍵名排序（區分大小寫）
+  // 2. 依照鍵名排序（區分大小寫，按 ASCII 順序）
   const sortedKeys = Object.keys(filteredParams).sort();
 
   // 調試日誌：顯示過濾後的參數
   if (process.env.NODE_ENV === 'development') {
-    console.log('[ECPay] 簽章計算使用的參數 (' + sortedKeys.length + ' 個):', sortedKeys);
+    console.log('[ECPay 簽章] 步驟 1-2：過濾並排序參數', {
+      filteredCount: sortedKeys.length,
+      keys: sortedKeys.slice(0, 5).join(', ') + (sortedKeys.length > 5 ? '...' : ''),
+    });
   }
 
   // 3. 組合參數字串
@@ -72,8 +72,18 @@ export function generateCheckMacValue(
   // 4. 加上 HashKey 和 HashIV
   const rawString = `HashKey=${hashKey}&${paramString}&HashIV=${hashIV}`;
 
-  // 5. URL Encode (ECPay 專用規則)
+  // 5. URL Encode (ECPay 專用規則：只有 5 個字符轉換)
   const encodedString = urlEncodeForECPay(rawString);
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[ECPay 簽章] 步驟 3-5：參數組合與 URL 編碼', {
+      rawStringLength: rawString.length,
+      encodedStringLength: encodedString.length,
+      // 只顯示前 100 個字符以避免日誌過長
+      rawStringPreview: rawString.substring(0, 100) + '...',
+      encodedPreview: encodedString.substring(0, 100) + '...',
+    });
+  }
 
   // 6. 轉小寫
   const lowerCaseString = encodedString.toLowerCase();
@@ -85,7 +95,15 @@ export function generateCheckMacValue(
     .digest('hex');
 
   // 8. 轉大寫
-  return hash.toUpperCase();
+  const finalSignature = hash.toUpperCase();
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[ECPay 簽章] 步驟 6-8：加密與轉換完成', {
+      signature: finalSignature,
+    });
+  }
+
+  return finalSignature;
 }
 
 /**
