@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
 
     if (!merchantTradeNo) {
       console.warn('[Payment Result] 缺少商家交易編號');
-      const redirectUrl = new URL('/', request.url);
-      redirectUrl.searchParams.set('payment', 'missing');
+      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+      const redirectUrl = new URL('/?payment=missing', baseUrl);
       return NextResponse.redirect(redirectUrl.toString());
     }
 
@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
       console.error('[Payment Result] CheckMacValue 驗證失敗:', {
         merchantTradeNo,
       });
-      const redirectUrl = new URL('/', request.url);
-      redirectUrl.searchParams.set('payment', 'invalid');
+      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+      const redirectUrl = new URL('/?payment=invalid', baseUrl);
       return NextResponse.redirect(redirectUrl.toString());
     }
 
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
 
     if (orderSnapshot.empty) {
       console.error('[Payment Result] 找不到訂單:', merchantTradeNo);
-      const redirectUrl = new URL('/', request.url);
-      redirectUrl.searchParams.set('payment', 'not-found');
+      const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+      const redirectUrl = new URL('/?payment=not-found', baseUrl);
       return NextResponse.redirect(redirectUrl.toString());
     }
 
@@ -138,12 +138,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 重定向到訂單詳情頁
-    const redirectUrl = new URL(`/order/${orderId}/result`, request.url);
+    const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+    const redirectUrl = new URL(`/order/${orderId}/result`, baseUrl);
     return NextResponse.redirect(redirectUrl.toString());
   } catch (error) {
     console.error('[Payment Result Error]', error);
-    const redirectUrl = new URL('/', request.url);
-    redirectUrl.searchParams.set('payment', 'error');
+    const baseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+    const redirectUrl = new URL('/?payment=error', baseUrl);
     return NextResponse.redirect(redirectUrl.toString());
   }
 }
