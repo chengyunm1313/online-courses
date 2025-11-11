@@ -31,10 +31,10 @@ export async function POST(request: NextRequest) {
     console.log('        ECPay CheckMacValue 詳細診斷');
     console.log('═══════════════════════════════════════════════════════════\n');
 
-    // 過濾參數
+    // 過濾參數（排除 undefined、空字符串、CheckMacValue）
     const filtered: Record<string, string | number> = {};
     Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && key !== 'CheckMacValue') {
+      if (value !== undefined && value !== '' && key !== 'CheckMacValue') {
         filtered[key] = value;
       }
     });

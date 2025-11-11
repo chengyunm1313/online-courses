@@ -60,12 +60,16 @@ export function generateCheckMacValue(
   hashKey: string,
   hashIV: string
 ): string {
-  // 1. 只移除 CheckMacValue 欄位和 undefined 值
-  // 根據實際 ECPay 行為，空字符串（""）應該被包含在簽章計算中
-  // 空字符串在組合時顯示為 key= （有等號但沒有值）
+  // 1. 過濾參數：
+  // 根據 ECPay 官方規範：
+  // - 移除 CheckMacValue 欄位（這是簽章本身）
+  // - 移除 undefined 值（未定義的參數）
+  // - 移除空字符串值（完全為空的參數不參與簽章）
+  // 這確保簽章計算只包含有實際值的參數
   const filteredParams: Record<string, string | number> = {};
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && key !== 'CheckMacValue') {
+    // 包含條件：value 不是 undefined、不是空字符串、不是 CheckMacValue
+    if (value !== undefined && value !== '' && key !== 'CheckMacValue') {
       filteredParams[key] = value;
     }
   });
