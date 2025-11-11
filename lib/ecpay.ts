@@ -47,16 +47,22 @@ export function generateCheckMacValue(
   hashKey: string,
   hashIV: string
 ): string {
-  // 1. 移除 CheckMacValue 欄位並過濾 undefined 值
+  // 1. 移除 CheckMacValue 欄位、空字符串 和 undefined 值
+  // ECPay 返回的參數中包含許多空字符串，這些也需要被過濾掉
   const filteredParams: Record<string, string | number> = {};
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && key !== 'CheckMacValue') {
+    if (value !== undefined && value !== '' && key !== 'CheckMacValue') {
       filteredParams[key] = value;
     }
   });
 
   // 2. 依照鍵名排序（區分大小寫）
   const sortedKeys = Object.keys(filteredParams).sort();
+
+  // 調試日誌：顯示過濾後的參數
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[ECPay] 簽章計算使用的參數 (' + sortedKeys.length + ' 個):', sortedKeys);
+  }
 
   // 3. 組合參數字串
   const paramString = sortedKeys
