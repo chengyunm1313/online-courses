@@ -71,9 +71,11 @@ export async function POST(request: NextRequest) {
       }
     });
     const sortedKeysForSignature = Object.keys(filteredForSignature).sort();
-    console.log('[Payment Result] 簽章計算的參數值:',
-      sortedKeysForSignature.map(key => `${key}=${filteredForSignature[key]}`).join('&')
-    );
+    console.log('[Payment Result] 簽章計算參數統計:', {
+      filteredCount: sortedKeysForSignature.length,
+      parameterString: sortedKeysForSignature.map(key => `${key}=${filteredForSignature[key]}`).join('&'),
+      keys: sortedKeysForSignature,
+    });
 
     // 驗證 CheckMacValue
     const signatureVerified = verifyCheckMacValue(params, config.hashKey, config.hashIV);
