@@ -1,5 +1,6 @@
 import type { CourseModule } from "@/types/course";
 import {
+  getCheckoutFunnelMetrics,
   createDiscountRecord,
   createCourseRecord,
   deleteCourseRecord,
@@ -168,6 +169,15 @@ export interface AdminReportData {
     refundRate: number;
     paidOrderCount: number;
     refundedOrderCount: number;
+  };
+  funnel: {
+    purchasePageViews: number;
+    discountApplied: number;
+    checkoutStarted: number;
+    ordersCreated: number;
+    paymentsSucceeded: number;
+    purchaseToCheckoutRate: number;
+    checkoutToPaidRate: number;
   };
   revenueByMonth: RevenueByMonth[];
   dailyEnrollments: DailyEnrollment[];
@@ -633,10 +643,11 @@ export async function getInstructorCourses(
 }
 
 export async function getAdminReportData(): Promise<AdminReportData> {
-  const [courses, orders, discounts] = await Promise.all([
+  const [courses, orders, discounts, funnel] = await Promise.all([
     listAllCoursesFromStore(),
     listOrdersFromStore(),
     listDiscountsFromStore(),
+    getCheckoutFunnelMetrics(),
   ]);
 
   const paidOrders = orders.filter((order) => order.status === "PAID" || order.status === "completed");
@@ -711,6 +722,13 @@ export async function getAdminReportData(): Promise<AdminReportData> {
       refundRate,
       paidOrderCount: paidOrders.length,
       refundedOrderCount: refundedOrders.length,
+    },
+    funnel: {
+      ...funnel,
+      purchaseToCheckoutRate:
+        funnel.purchasePageViews > 0 ? funnel.checkoutStarted / funnel.purchasePageViews : 0,
+      checkoutToPaidRate:
+        funnel.checkoutStarted > 0 ? funnel.paymentsSucceeded / funnel.checkoutStarted : 0,
     },
     revenueByMonth: Array.from(revenueByMonthMap.values()).sort((a, b) => a.month.localeCompare(b.month)),
     dailyEnrollments: Array.from(dailyEnrollmentsMap.values()).sort((a, b) => a.date.localeCompare(b.date)),

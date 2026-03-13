@@ -1,4 +1,5 @@
 import {
+  createAnalyticsEvent,
   createOrderEvent,
   getOrderByMerchantTradeNo,
   hasOrderEvent,
@@ -97,6 +98,18 @@ export async function processVerifiedPayment(input: PaymentProcessingInput) {
   });
 
   if (status === "PAID") {
+    await createAnalyticsEvent({
+      eventName: "payment_succeeded",
+      userId: order.userId,
+      courseId: order.items[0]?.courseId,
+      orderId: order.id,
+      paymentMethod: order.paymentMethod,
+      amount: order.total,
+      payload: {
+        tradeNo: input.tradeNo,
+        source: input.source,
+      },
+    });
     for (const item of order.items) {
       await ensureEnrollmentForPaidOrder({
         userId: order.userId,

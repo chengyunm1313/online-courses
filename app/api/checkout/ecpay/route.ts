@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { consumeDiscountUsage, evaluateDiscount } from "@/lib/checkout";
-import { createOrderRecord } from "@/lib/d1-repository";
+import { createAnalyticsEvent, createOrderRecord } from "@/lib/d1-repository";
 import {
   generateCheckMacValue,
   generateMerchantTradeNo,
@@ -84,6 +84,18 @@ export async function POST(request: NextRequest) {
       notes: body.notes?.trim() || discount.code ? [body.notes?.trim(), discount.code ? `折扣碼: ${discount.code}` : ""].filter(Boolean).join("\n") : undefined,
       reconciliationStatus: "pending",
       refundStatus: "none",
+    });
+    await createAnalyticsEvent({
+      eventName: "order_created",
+      userId: session.user.id,
+      courseId: resolvedCourses[0]?.id,
+      orderId,
+      discountCode: discount.code || undefined,
+      paymentMethod,
+      amount: total,
+      payload: {
+        courseCount: resolvedCourses.length,
+      },
     });
     await consumeDiscountUsage(discount.discountId);
 

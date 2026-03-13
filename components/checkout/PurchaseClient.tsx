@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { trackCheckoutEvent } from "@/lib/analytics";
 
 interface PurchaseClientProps {
   course: {
@@ -41,6 +42,19 @@ export default function PurchaseClient({ course }: PurchaseClientProps) {
   const [appliedCode, setAppliedCode] = useState<string | null>(
     presetCode || null
   );
+  const trackedViewRef = useRef(false);
+
+  useEffect(() => {
+    if (trackedViewRef.current) {
+      return;
+    }
+    trackedViewRef.current = true;
+    void trackCheckoutEvent({
+      eventName: "purchase_page_view",
+      courseId: course.id,
+      amount: course.price,
+    });
+  }, [course.id, course.price]);
 
   const handleApplyDiscount = async () => {
     setIsApplying(true);
@@ -73,6 +87,12 @@ export default function PurchaseClient({ course }: PurchaseClientProps) {
       setFinalPrice(data.finalPrice);
       setDiscountAmount(data.discountAmount);
       setSuccess(data.message ?? "折扣碼已套用。");
+      void trackCheckoutEvent({
+        eventName: "discount_applied",
+        courseId: course.id,
+        discountCode: data.code ?? discountCode.trim(),
+        amount: data.discountAmount,
+      });
     } catch (err) {
       console.error(err);
       setError("套用折扣碼時發生錯誤，請稍後再試。");
@@ -106,6 +126,12 @@ export default function PurchaseClient({ course }: PurchaseClientProps) {
       };
 
       sessionStorage.setItem('checkoutCart', JSON.stringify(cartData));
+      void trackCheckoutEvent({
+        eventName: "checkout_started",
+        courseId: course.id,
+        discountCode: appliedCode ?? undefined,
+        amount: finalPrice,
+      });
 
       // 導向結帳頁面
       router.push('/checkout/ecpay');

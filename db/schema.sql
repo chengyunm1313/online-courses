@@ -154,6 +154,20 @@ CREATE TABLE IF NOT EXISTS lesson_progress (
   UNIQUE (user_id, course_id, lesson_id)
 );
 
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id TEXT PRIMARY KEY,
+  event_name TEXT NOT NULL,
+  user_id TEXT,
+  session_id TEXT,
+  course_id TEXT,
+  order_id TEXT,
+  discount_code TEXT,
+  payment_method TEXT,
+  amount INTEGER,
+  payload_json TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_courses_published ON courses (published, updated_at);
 CREATE INDEX IF NOT EXISTS idx_courses_status ON courses (status, updated_at);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id, created_at);
@@ -162,3 +176,5 @@ CREATE INDEX IF NOT EXISTS idx_enrollments_user_id ON enrollments (user_id, crea
 CREATE INDEX IF NOT EXISTS idx_order_events_event_key ON order_events (event_key);
 CREATE INDEX IF NOT EXISTS idx_discounts_code ON discounts (code, enabled);
 CREATE INDEX IF NOT EXISTS idx_lesson_progress_user_course ON lesson_progress (user_id, course_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_name_created ON analytics_events (event_name, created_at);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_course_created ON analytics_events (course_id, created_at);

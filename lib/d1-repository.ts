@@ -187,6 +187,26 @@ export interface DiscountRecord {
   usageCount: number;
 }
 
+export interface AnalyticsEventInput {
+  eventName: string;
+  userId?: string;
+  sessionId?: string;
+  courseId?: string;
+  orderId?: string;
+  discountCode?: string;
+  paymentMethod?: string;
+  amount?: number;
+  payload?: Record<string, unknown>;
+}
+
+export interface CheckoutFunnelMetrics {
+  purchasePageViews: number;
+  discountApplied: number;
+  checkoutStarted: number;
+  ordersCreated: number;
+  paymentsSucceeded: number;
+}
+
 const PLACEHOLDER_THUMBNAIL =
   "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?w=800";
 const DEFAULT_INSTRUCTOR_ID = "demo-instructor-skypassion5000";
@@ -1411,6 +1431,49 @@ export async function replaceCourseModules(courseId: string, modules: CourseModu
       );
     }
   }
+}
+
+export async function createAnalyticsEvent(input: AnalyticsEventInput): Promise<void> {
+  await executeD1(
+    `INSERT INTO analytics_events (
+      id, event_name, user_id, session_id, course_id, order_id, discount_code,
+      payment_method, amount, payload_json, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      crypto.randomUUID(),
+      input.eventName,
+      input.userId ?? null,
+      input.sessionId ?? null,
+      input.courseId ?? null,
+      input.orderId ?? null,
+      input.discountCode ?? null,
+      input.paymentMethod ?? null,
+      typeof input.amount === "number" ? input.amount : null,
+      input.payload ? stringifyJson(input.payload) : null,
+      nowIso(),
+    ],
+  );
+}
+
+export async function getCheckoutFunnelMetrics(days = 30): Promise<CheckoutFunnelMetrics> {
+  const startAt = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const rows = await queryD1<{ event_name: string; count: number }>(
+    `SELECT event_name, COUNT(*) AS count
+     FROM analytics_events
+     WHERE created_at >= ?
+       AND event_name IN ('purchase_page_view', 'discount_applied', 'checkout_started', 'order_created', 'payment_succeeded')
+     GROUP BY event_name`,
+    [startAt],
+  );
+
+  const counts = new Map(rows.map((row) => [row.event_name, Number(row.count ?? 0)]));
+  return {
+    purchasePageViews: counts.get("purchase_page_view") ?? 0,
+    discountApplied: counts.get("discount_applied") ?? 0,
+    checkoutStarted: counts.get("checkout_started") ?? 0,
+    ordersCreated: counts.get("order_created") ?? 0,
+    paymentsSucceeded: counts.get("payment_succeeded") ?? 0,
+  };
 }
 
 export async function updateCourseRecord(input: {

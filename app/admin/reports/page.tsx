@@ -86,6 +86,51 @@ export default async function AdminReportsPage() {
 
         <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900">結帳漏斗</h2>
+            <p className="text-xs text-gray-500">
+              最近 30 天從課程購買頁到付款成功的轉換情況。
+            </p>
+            <div className="mt-4 space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+                  <p className="text-xs text-gray-500">購買頁瀏覽</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">
+                    {formatNumber(report.funnel.purchasePageViews)}
+                  </p>
+                </div>
+                <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+                  <p className="text-xs text-gray-500">折扣碼套用</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">
+                    {formatNumber(report.funnel.discountApplied)}
+                  </p>
+                </div>
+                <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+                  <p className="text-xs text-gray-500">開始結帳</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">
+                    {formatNumber(report.funnel.checkoutStarted)}
+                  </p>
+                </div>
+                <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+                  <p className="text-xs text-gray-500">建立訂單</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">
+                    {formatNumber(report.funnel.ordersCreated)}
+                  </p>
+                </div>
+                <div className="rounded-md border border-gray-100 bg-gray-50 p-4 sm:col-span-2">
+                  <p className="text-xs text-gray-500">付款成功</p>
+                  <p className="mt-1 text-2xl font-bold text-emerald-600">
+                    {formatNumber(report.funnel.paymentsSucceeded)}
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-md border border-gray-100 bg-slate-50 p-4 text-sm text-gray-700">
+                <p>購買頁 → 開始結帳：{formatPercent(report.funnel.purchaseToCheckoutRate)}</p>
+                <p className="mt-1">開始結帳 → 付款成功：{formatPercent(report.funnel.checkoutToPaidRate)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900">折扣碼使用排行</h2>
             <p className="text-xs text-gray-500">
               依使用次數排序，快速判斷哪些促銷活動真的有被用到。
