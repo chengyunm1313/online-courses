@@ -55,9 +55,6 @@ ECPAY_CASHIER_URL = "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5"
 npx wrangler secret put NEXTAUTH_SECRET
 npx wrangler secret put GOOGLE_CLIENT_ID
 npx wrangler secret put GOOGLE_CLIENT_SECRET
-npx wrangler secret put CLOUDFLARE_ACCOUNT_ID
-npx wrangler secret put CLOUDFLARE_D1_DATABASE_ID
-npx wrangler secret put CLOUDFLARE_API_TOKEN
 npx wrangler secret put ECPAY_MERCHANT_ID
 npx wrangler secret put ECPAY_HASH_KEY
 npx wrangler secret put ECPAY_HASH_IV
@@ -70,9 +67,12 @@ npx wrangler secret put GMAIL_SENDER_EMAIL
 若要執行舊 Firestore -> D1 遷移腳本，再額外設定：
 
 ```bash
-npx wrangler secret put FIREBASE_PROJECT_ID
-npx wrangler secret put FIREBASE_CLIENT_EMAIL
-npx wrangler secret put FIREBASE_PRIVATE_KEY
+export CLOUDFLARE_ACCOUNT_ID=your-cloudflare-account-id
+export CLOUDFLARE_D1_DATABASE_ID=your-d1-database-id
+export CLOUDFLARE_API_TOKEN=your-cloudflare-api-token
+export FIREBASE_PROJECT_ID=your-firebase-project-id
+export FIREBASE_CLIENT_EMAIL=your-firebase-client-email
+export FIREBASE_PRIVATE_KEY='-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n'
 ```
 
 ## 6. 本機建立 `.env.local`
