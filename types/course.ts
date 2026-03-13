@@ -7,6 +7,10 @@ export interface Course {
   title: string;
   subtitle?: string;
   slug?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  guaranteeText?: string;
+  ctaLabel?: string;
   description: string;
   thumbnail: string;
   ogImage?: string;
@@ -91,6 +95,7 @@ export interface CourseModuleItem {
   order: number;
   videoUrl?: string;
   preview?: boolean;
+  previewOverride?: "inherit" | "preview" | "locked";
 }
 
 export interface CourseModule {
@@ -98,6 +103,7 @@ export interface CourseModule {
   title: string;
   description?: string;
   order: number;
+  previewMode?: "locked" | "preview";
   lessons: CourseModuleItem[];
 }
 
@@ -162,3 +168,5 @@ export interface ResolvedCourseOffer {
   requiresWaitlist: boolean;
   salesStatusLabel: string;
 }
+
+export type LessonAccessState = "hidden" | "preview" | "full";

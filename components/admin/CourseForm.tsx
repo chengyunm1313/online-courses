@@ -13,6 +13,10 @@ export interface CourseFormInitialValues {
   title?: string;
   subtitle?: string;
   slug?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  guaranteeText?: string;
+  ctaLabel?: string;
   description?: string;
   thumbnail?: string;
   ogImage?: string;
@@ -72,6 +76,7 @@ export interface CourseFormInitialValues {
     id: string;
     title: string;
     description?: string;
+    previewMode?: "locked" | "preview";
     order?: number;
     lessons: {
       id: string;
@@ -80,6 +85,7 @@ export interface CourseFormInitialValues {
       duration?: number;
       videoUrl?: string;
       preview?: boolean;
+      previewOverride?: "inherit" | "preview" | "locked";
       order?: number;
     }[];
   }[];
@@ -102,12 +108,14 @@ type LessonForm = {
   duration: string;
   videoUrl: string;
   preview: boolean;
+  previewOverride: "inherit" | "preview" | "locked";
 };
 
 type ModuleForm = {
   id: string;
   title: string;
   description: string;
+  previewMode: "locked" | "preview";
   lessons: LessonForm[];
 };
 
@@ -119,6 +127,7 @@ type SanitizedLesson = {
   order: number;
   videoUrl?: string;
   preview?: boolean;
+  previewOverride?: "inherit" | "preview" | "locked";
 };
 
 type SanitizedModule = {
@@ -126,6 +135,7 @@ type SanitizedModule = {
   title: string;
   description?: string;
   order: number;
+  previewMode?: "locked" | "preview";
   lessons: SanitizedLesson[];
 };
 
@@ -183,12 +193,15 @@ const createLessonForm = (lesson?: Partial<LessonForm>): LessonForm => ({
   duration: lesson?.duration ?? "0",
   videoUrl: lesson?.videoUrl ?? "",
   preview: Boolean(lesson?.preview),
+  previewOverride:
+    lesson?.previewOverride ?? (lesson?.preview ? "preview" : "inherit"),
 });
 
 const createModuleForm = (module?: Partial<ModuleForm>): ModuleForm => ({
   id: module?.id || `module-${generateId()}`,
   title: module?.title ?? "",
   description: module?.description ?? "",
+  previewMode: module?.previewMode ?? "locked",
   lessons: module?.lessons?.map((lesson) => createLessonForm(lesson)) ?? [],
 });
 
@@ -226,6 +239,8 @@ export default function CourseForm({
                     duration: String(lesson.duration ?? 0),
                     videoUrl: lesson.videoUrl ?? "",
                     preview: Boolean(lesson.preview),
+                    previewOverride:
+                      lesson.previewOverride ?? (lesson.preview ? "preview" : "inherit"),
                   })
                 ),
             })
@@ -237,6 +252,7 @@ export default function CourseForm({
           createModuleForm({
             id: "module-1",
             title: "課程內容",
+            previewMode: "locked",
             lessons: initialValues.syllabus.map((item) =>
               createLessonForm({
                 id: item.id,
@@ -255,6 +271,10 @@ export default function CourseForm({
       title: initialValues?.title ?? "",
       subtitle: initialValues?.subtitle ?? "",
       slug: initialValues?.slug ?? "",
+      heroTitle: initialValues?.heroTitle ?? initialValues?.title ?? "",
+      heroSubtitle: initialValues?.heroSubtitle ?? initialValues?.subtitle ?? "",
+      guaranteeText: initialValues?.guaranteeText ?? "",
+      ctaLabel: initialValues?.ctaLabel ?? "",
       description: initialValues?.description ?? "",
       thumbnail: initialValues?.thumbnail ?? "",
       ogImage: initialValues?.ogImage ?? "",
@@ -311,6 +331,10 @@ export default function CourseForm({
   const [title, setTitle] = useState(defaultValues.title);
   const [subtitle, setSubtitle] = useState(defaultValues.subtitle);
   const [slug, setSlug] = useState(defaultValues.slug);
+  const [heroTitle, setHeroTitle] = useState(defaultValues.heroTitle);
+  const [heroSubtitle, setHeroSubtitle] = useState(defaultValues.heroSubtitle);
+  const [guaranteeText, setGuaranteeText] = useState(defaultValues.guaranteeText);
+  const [ctaLabel, setCtaLabel] = useState(defaultValues.ctaLabel);
   const [description, setDescription] = useState(defaultValues.description);
   const [thumbnail, setThumbnail] = useState(defaultValues.thumbnail);
   const [ogImage, setOgImage] = useState(defaultValues.ogImage);
@@ -376,7 +400,11 @@ export default function CourseForm({
   }, []);
 
   const updateModuleField = useCallback(
-    (index: number, field: keyof ModuleForm, value: string) => {
+    (
+      index: number,
+      field: keyof ModuleForm,
+      value: string | "locked" | "preview"
+    ) => {
       setModules((prev) =>
         prev.map((module, idx) =>
           idx === index ? { ...module, [field]: value } : module
@@ -461,7 +489,10 @@ export default function CourseForm({
               description: trimmedDescription || undefined,
               duration: Number.isFinite(durationNum) ? Math.max(durationNum, 0) : 0,
               videoUrl: trimmedVideoUrl || undefined,
-              preview: Boolean(lesson.preview),
+              preview:
+                lesson.previewOverride === "preview" ||
+                (lesson.previewOverride === "inherit" && module.previewMode === "preview"),
+              previewOverride: lesson.previewOverride,
             };
           })
           .filter((lesson) => lesson.title)
@@ -480,6 +511,7 @@ export default function CourseForm({
           title: module.title.trim() || `章節 ${moduleIndex + 1}`,
           description: trimmedModuleDescription || undefined,
           order: moduleIndex + 1,
+          previewMode: module.previewMode,
           lessons: sanitizedLessons,
         };
       })
@@ -545,6 +577,10 @@ export default function CourseForm({
       title,
       subtitle: subtitle.trim() || undefined,
       slug: slug.trim() || undefined,
+      heroTitle: heroTitle.trim() || title.trim(),
+      heroSubtitle: heroSubtitle.trim() || subtitle.trim() || undefined,
+      guaranteeText: guaranteeText.trim() || undefined,
+      ctaLabel: ctaLabel.trim() || undefined,
       description,
       thumbnail,
       ogImage: ogImage.trim() || undefined,
@@ -595,6 +631,7 @@ export default function CourseForm({
         order: index + 1,
         videoUrl: lesson.videoUrl,
         preview: Boolean(lesson.preview),
+        previewOverride: lesson.previewOverride,
       })),
     };
 
@@ -630,6 +667,11 @@ export default function CourseForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-slate-950">基本資訊</h2>
+          <p className="text-sm text-slate-600">設定課程標題、公開網址、講師與封面資料。</p>
+        </div>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-gray-900">
@@ -663,6 +705,28 @@ export default function CourseForm({
             onChange={(event) => setSlug(event.target.value)}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="例如：build-online-academy"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">Hero 主標題</label>
+          <input
+            type="text"
+            value={heroTitle}
+            onChange={(event) => setHeroTitle(event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="課程銷售頁主標題，預設沿用課程名稱"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">Hero 副標題</label>
+          <input
+            type="text"
+            value={heroSubtitle}
+            onChange={(event) => setHeroSubtitle(event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="銷售頁前段摘要，預設沿用副標題"
           />
         </div>
 
@@ -797,7 +861,9 @@ export default function CourseForm({
           />
         </div>
       </div>
+      </section>
 
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="space-y-2">
         <label className="text-sm font-semibold text-gray-800">課程描述</label>
         <textarea
@@ -807,6 +873,30 @@ export default function CourseForm({
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="請簡要介紹課程內容與學習重點"
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">購買保證文案</label>
+          <textarea
+            value={guaranteeText}
+            onChange={(event) => setGuaranteeText(event.target.value)}
+            rows={5}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="例如：付款成功後立即開通，若有異常請聯繫客服人工協助。"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">主要 CTA 文案</label>
+          <input
+            type="text"
+            value={ctaLabel}
+            onChange={(event) => setCtaLabel(event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="例如：立即加入實戰訓練"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -832,6 +922,7 @@ export default function CourseForm({
           />
         </div>
       </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-2">
@@ -1083,7 +1174,7 @@ export default function CourseForm({
           <div>
             <h2 className="text-lg font-semibold text-gray-900">課程章節設定</h2>
             <p className="text-xs text-gray-500">
-              建議依章節拆分內容，並提供影片網址與是否免費試看。
+              每個章節可設定預設試看，單堂課可再覆蓋為「跟隨章節 / 可試看 / 鎖定」。
             </p>
           </div>
           <button
@@ -1133,6 +1224,23 @@ export default function CourseForm({
                           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="此章節主要學習重點"
                         />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-gray-600">章節預設試看</label>
+                        <select
+                          value={module.previewMode}
+                          onChange={(event) =>
+                            updateModuleField(
+                              moduleIndex,
+                              "previewMode",
+                              event.target.value as "locked" | "preview"
+                            )
+                          }
+                          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="locked">購買後解鎖</option>
+                          <option value="preview">本章節可試看</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -1216,16 +1324,38 @@ export default function CourseForm({
                             />
                           </div>
                         </div>
-                        <label className="inline-flex items-center gap-2 text-xs text-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={lesson.preview}
-                            onChange={(event) =>
-                              updateLessonField(moduleIndex, lessonIndex, "preview", event.target.checked)
-                            }
-                          />
-                          免費試看
-                        </label>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-gray-600">本堂權限覆蓋</label>
+                          <select
+                            value={lesson.previewOverride}
+                            onChange={(event) => {
+                              const previewOverride = event.target.value as "inherit" | "preview" | "locked";
+                              updateLessonField(moduleIndex, lessonIndex, "previewOverride", previewOverride);
+                              updateLessonField(
+                                moduleIndex,
+                                lessonIndex,
+                                "preview",
+                                previewOverride === "preview" ||
+                                  (previewOverride === "inherit" && module.previewMode === "preview")
+                              );
+                            }}
+                            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="inherit">跟隨章節預設</option>
+                            <option value="preview">此堂可試看</option>
+                            <option value="locked">此堂鎖定</option>
+                          </select>
+                          <p className="text-xs text-gray-500">
+                            目前前台狀態：
+                            {lesson.previewOverride === "preview"
+                              ? " 已登入即可試看"
+                              : lesson.previewOverride === "locked"
+                                ? " 必須購買後解鎖"
+                                : module.previewMode === "preview"
+                                  ? " 跟隨章節，可試看"
+                                  : " 跟隨章節，購買後解鎖"}
+                          </p>
+                        </div>
                       </div>
                     ))
                   )}

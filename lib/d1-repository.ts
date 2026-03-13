@@ -37,6 +37,10 @@ interface CourseRow {
   title: string;
   subtitle: string | null;
   slug: string | null;
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  guarantee_text: string | null;
+  cta_label: string | null;
   status: "draft" | "published" | "archived";
   description: string;
   thumbnail: string | null;
@@ -82,6 +86,7 @@ interface CourseModuleRow {
   course_id: string;
   title: string;
   description: string | null;
+  preview_mode: "locked" | "preview";
   sort_order: number;
 }
 
@@ -93,6 +98,7 @@ interface CourseLessonRow {
   duration: number;
   video_url: string | null;
   preview: number;
+  preview_override: "inherit" | "preview" | "locked";
   sort_order: number;
 }
 
@@ -447,6 +453,10 @@ function mapCourseRow(
     title: row.title,
     subtitle: row.subtitle ?? undefined,
     slug: row.slug ?? undefined,
+    heroTitle: row.hero_title ?? undefined,
+    heroSubtitle: row.hero_subtitle ?? undefined,
+    guaranteeText: row.guarantee_text ?? undefined,
+    ctaLabel: row.cta_label ?? undefined,
     description: row.description,
     thumbnail: row.thumbnail ?? PLACEHOLDER_THUMBNAIL,
     ogImage: row.og_image ?? undefined,
@@ -530,6 +540,7 @@ async function listCourseModules(courseIds: string[]): Promise<Map<string, Cours
       order: Number(row.sort_order ?? lessons.length + 1),
       videoUrl: row.video_url ?? undefined,
       preview: Boolean(row.preview),
+      previewOverride: row.preview_override ?? (row.preview ? "preview" : "inherit"),
     });
     lessonsByModule.set(row.module_id, lessons);
   }
@@ -542,6 +553,7 @@ async function listCourseModules(courseIds: string[]): Promise<Map<string, Cours
       title: row.title,
       description: row.description ?? undefined,
       order: Number(row.sort_order ?? modules.length + 1),
+      previewMode: row.preview_mode ?? "locked",
       lessons: (lessonsByModule.get(row.id) ?? []).map((lesson, index) => ({
         ...lesson,
         order: index + 1,
@@ -618,18 +630,22 @@ async function seedMockCourses(): Promise<void> {
 
     await executeD1(
       `INSERT OR REPLACE INTO courses (
-        id, title, subtitle, slug, status, description, thumbnail, og_image, price, original_price,
+        id, title, subtitle, slug, hero_title, hero_subtitle, guarantee_text, cta_label, status, description, thumbnail, og_image, price, original_price,
         sales_mode, sales_status, launch_starts_at, launch_ends_at, show_countdown, show_seats, seat_limit,
         sold_count_mode, lead_magnet_enabled, lead_magnet_title, lead_magnet_description, lead_magnet_coupon_code,
         category, level, duration, lessons, rating, students_enrolled, tags_json, instructor_id, instructor_name, instructor_avatar,
         instructor_bio, target_audience_json, learning_outcomes_json, faq_json, sales_blocks_json,
         seo_title, seo_description, published, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         course.id,
         course.title,
         course.subtitle ?? null,
         course.slug ?? course.id,
+        course.heroTitle ?? course.title,
+        course.heroSubtitle ?? course.subtitle ?? null,
+        course.guaranteeText ?? null,
+        course.ctaLabel ?? null,
         course.status ?? (course.published ? "published" : "draft"),
         course.description,
         course.thumbnail,
@@ -673,13 +689,14 @@ async function seedMockCourses(): Promise<void> {
 
     for (const courseModule of course.modules) {
       await executeD1(
-        `INSERT OR REPLACE INTO course_modules (id, course_id, title, description, sort_order)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO course_modules (id, course_id, title, description, preview_mode, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
           courseModule.id,
           course.id,
           courseModule.title,
           courseModule.description ?? null,
+          courseModule.previewMode ?? "locked",
           courseModule.order,
         ],
       );
@@ -687,8 +704,8 @@ async function seedMockCourses(): Promise<void> {
       for (const lesson of courseModule.lessons) {
         await executeD1(
           `INSERT OR REPLACE INTO course_lessons (
-            id, module_id, title, description, duration, video_url, preview, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, module_id, title, description, duration, video_url, preview, preview_override, sort_order
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             lesson.id,
             courseModule.id,
@@ -697,6 +714,7 @@ async function seedMockCourses(): Promise<void> {
             lesson.duration,
             lesson.videoUrl ?? null,
             lesson.preview ? 1 : 0,
+            lesson.previewOverride ?? (lesson.preview ? "preview" : "inherit"),
             lesson.order,
           ],
         );
@@ -969,20 +987,22 @@ export async function getCourseByIdFromStore(courseId: string): Promise<Course |
   await ensureD1Seeded();
 
   if (!isD1Configured()) {
-    return mockCourses.find((course) => course.id === courseId) ?? null;
+    return (
+      mockCourses.find((course) => course.id === courseId || course.slug === courseId) ?? null
+    );
   }
 
   const row = await queryFirstD1<CourseRow>(
-    `SELECT * FROM courses WHERE id = ? LIMIT 1`,
-    [courseId],
+    `SELECT * FROM courses WHERE id = ? OR slug = ? LIMIT 1`,
+    [courseId, courseId],
   );
   if (!row) {
     return null;
   }
 
-  const modulesMap = await listCourseModules([courseId]);
-  const priceLaddersMap = await listCoursePriceLadders([courseId]);
-  return mapCourseRow(row, modulesMap.get(courseId) ?? [], priceLaddersMap.get(courseId) ?? []);
+  const modulesMap = await listCourseModules([row.id]);
+  const priceLaddersMap = await listCoursePriceLadders([row.id]);
+  return mapCourseRow(row, modulesMap.get(row.id) ?? [], priceLaddersMap.get(row.id) ?? []);
 }
 
 export interface OrderDraftItem {
@@ -1524,6 +1544,10 @@ export async function createCourseRecord(input: {
   title: string;
   subtitle?: string;
   slug?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  guaranteeText?: string;
+  ctaLabel?: string;
   status: "draft" | "published" | "archived";
   description: string;
   thumbnail?: string;
@@ -1564,19 +1588,23 @@ export async function createCourseRecord(input: {
   const id = crypto.randomUUID();
   const now = nowIso();
   await executeD1(
-      `INSERT INTO courses (
-      id, title, subtitle, slug, status, description, thumbnail, og_image, price, original_price,
+    `INSERT INTO courses (
+      id, title, subtitle, slug, hero_title, hero_subtitle, guarantee_text, cta_label, status, description, thumbnail, og_image, price, original_price,
       sales_mode, sales_status, launch_starts_at, launch_ends_at, show_countdown, show_seats, seat_limit,
       sold_count_mode, lead_magnet_enabled, lead_magnet_title, lead_magnet_description, lead_magnet_coupon_code,
       category, level, duration, lessons, rating, students_enrolled, tags_json, instructor_id, instructor_name, instructor_avatar,
       instructor_bio, target_audience_json, learning_outcomes_json, faq_json, sales_blocks_json,
       seo_title, seo_description, published, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.title,
       input.subtitle ?? null,
       input.slug ?? id,
+      input.heroTitle ?? input.title,
+      input.heroSubtitle ?? input.subtitle ?? null,
+      input.guaranteeText ?? null,
+      input.ctaLabel ?? null,
       input.status,
       input.description,
       input.thumbnail ?? null,
@@ -1658,21 +1686,22 @@ export async function replaceCourseModules(courseId: string, modules: CourseModu
 
   for (const courseModule of modules) {
     await executeD1(
-      `INSERT INTO course_modules (id, course_id, title, description, sort_order)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO course_modules (id, course_id, title, description, preview_mode, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?)`,
       [
         courseModule.id || crypto.randomUUID(),
         courseId,
         courseModule.title,
         courseModule.description ?? null,
+        courseModule.previewMode ?? "locked",
         courseModule.order,
       ],
     );
     for (const lesson of courseModule.lessons) {
       await executeD1(
         `INSERT INTO course_lessons (
-          id, module_id, title, description, duration, video_url, preview, sort_order
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          id, module_id, title, description, duration, video_url, preview, preview_override, sort_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           lesson.id || crypto.randomUUID(),
           courseModule.id,
@@ -1681,6 +1710,7 @@ export async function replaceCourseModules(courseId: string, modules: CourseModu
           lesson.duration,
           lesson.videoUrl ?? null,
           lesson.preview ? 1 : 0,
+          lesson.previewOverride ?? (lesson.preview ? "preview" : "inherit"),
           lesson.order,
         ],
       );
@@ -1927,6 +1957,10 @@ export async function updateCourseRecord(input: {
   title: string;
   subtitle?: string;
   slug?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  guaranteeText?: string;
+  ctaLabel?: string;
   status: "draft" | "published" | "archived";
   description: string;
   thumbnail?: string;
@@ -1966,7 +2000,7 @@ export async function updateCourseRecord(input: {
 }): Promise<void> {
   await executeD1(
     `UPDATE courses
-     SET title = ?, subtitle = ?, slug = ?, status = ?, description = ?, thumbnail = ?, og_image = ?, price = ?, original_price = ?,
+     SET title = ?, subtitle = ?, slug = ?, hero_title = ?, hero_subtitle = ?, guarantee_text = ?, cta_label = ?, status = ?, description = ?, thumbnail = ?, og_image = ?, price = ?, original_price = ?,
          sales_mode = ?, sales_status = ?, launch_starts_at = ?, launch_ends_at = ?, show_countdown = ?, show_seats = ?, seat_limit = ?,
          sold_count_mode = ?, lead_magnet_enabled = ?, lead_magnet_title = ?, lead_magnet_description = ?, lead_magnet_coupon_code = ?,
          category = ?, level = ?, duration = ?, lessons = ?, tags_json = ?, published = ?, instructor_id = ?, instructor_name = ?, instructor_avatar = ?,
@@ -1977,6 +2011,10 @@ export async function updateCourseRecord(input: {
       input.title,
       input.subtitle ?? null,
       input.slug ?? input.id,
+      input.heroTitle ?? input.title,
+      input.heroSubtitle ?? input.subtitle ?? null,
+      input.guaranteeText ?? null,
+      input.ctaLabel ?? null,
       input.status,
       input.description,
       input.thumbnail ?? null,

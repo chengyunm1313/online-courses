@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS courses (
   title TEXT NOT NULL,
   subtitle TEXT,
   slug TEXT UNIQUE,
+  hero_title TEXT,
+  hero_subtitle TEXT,
+  guarantee_text TEXT,
+  cta_label TEXT,
   status TEXT NOT NULL DEFAULT 'draft',
   description TEXT NOT NULL DEFAULT '',
   thumbnail TEXT,
@@ -72,6 +76,7 @@ CREATE TABLE IF NOT EXISTS course_modules (
   course_id TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT,
+  preview_mode TEXT NOT NULL DEFAULT 'locked',
   sort_order INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (course_id) REFERENCES courses(id)
 );
@@ -84,6 +89,7 @@ CREATE TABLE IF NOT EXISTS course_lessons (
   duration INTEGER NOT NULL DEFAULT 0,
   video_url TEXT,
   preview INTEGER NOT NULL DEFAULT 0,
+  preview_override TEXT NOT NULL DEFAULT 'inherit',
   sort_order INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY (module_id) REFERENCES course_modules(id)
 );

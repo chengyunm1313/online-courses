@@ -2,9 +2,11 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import type { CourseModule, CourseModuleItem } from "@/types/course";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Navbar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
 import { getPublishedCourseById } from "@/lib/public-courses";
 import VideoEmbed from "@/components/VideoEmbed";
 import EnrollButton from "./EnrollButton";
@@ -15,6 +17,7 @@ import {
   touchEnrollmentLastAccessed,
 } from "@/lib/enrollments";
 import { resolveCourseOffer } from "@/lib/course-sales";
+import { resolveLessonAccess, isLessonPreviewable } from "@/lib/course-access";
 
 const SECTION_CONFIG = [
   { id: "overview", label: "總覽" },
@@ -125,31 +128,43 @@ export default async function CourseDetailPage({
   const session = await getServerSession(authOptions);
   const offer = resolveCourseOffer(course);
 
-  const modules = (course.modules.length > 0
-    ? course.modules
-    : [
-        {
-          id: "module-1",
-          title: "課程內容",
-          description: undefined,
-          order: 1,
-          lessons: course.syllabus.map((item, index) => ({
-            id: item.id,
-            title: item.title,
-            description: item.description || undefined,
-            duration: item.duration ?? 0,
-            order: item.order ?? index + 1,
-            videoUrl: item.videoUrl,
-            preview: item.preview ?? index < 2,
-          })),
-        },
-      ]
-  )
-    .map((module) => ({
+  const sourceModules: CourseModule[] =
+    course.modules.length > 0
+      ? course.modules
+      : [
+          {
+            id: "module-1",
+            title: "課程內容",
+            description: undefined,
+            order: 1,
+            previewMode: "locked",
+            lessons: course.syllabus.map((item, index) => ({
+              id: item.id,
+              title: item.title,
+              description: item.description || undefined,
+              duration: item.duration ?? 0,
+              order: item.order ?? index + 1,
+              videoUrl: item.videoUrl,
+              preview: item.preview ?? index < 2,
+              previewOverride: item.preview ? "preview" : "inherit",
+            })),
+          },
+        ];
+
+  const modules: CourseModule[] = sourceModules
+    .map((module): CourseModule => ({
       ...module,
+      previewMode: module.previewMode ?? "locked",
       lessons: module.lessons
         .slice()
-        .sort((a, b) => a.order - b.order),
+        .sort((a, b) => a.order - b.order)
+        .map(
+          (lesson): CourseModuleItem => ({
+            ...lesson,
+            previewOverride:
+              lesson.previewOverride ?? (lesson.preview ? "preview" : "inherit"),
+          }),
+        ),
     }))
     .filter((module) => module.lessons.length > 0)
     .sort((a, b) => a.order - b.order);
@@ -165,7 +180,11 @@ export default async function CourseDetailPage({
 
   const isEnrolled =
     Boolean(enrollment) && enrollment?.status !== "cancelled";
+  const isLoggedIn = Boolean(session?.user?.id);
   const completedLessonSet = new Set(enrollment?.completedLessons ?? []);
+  const hasPreviewLessons = modules.some((module) =>
+    module.lessons.some((lesson) => isLessonPreviewable(lesson, module)),
+  );
 
   const totalLessons = modules.reduce(
     (sum, module) => sum + module.lessons.length,
@@ -177,7 +196,7 @@ export default async function CourseDetailPage({
     0,
   );
 
-  const flatLessons = modules.flatMap((module) => module.lessons);
+  const flatLessons: CourseModuleItem[] = modules.flatMap((module) => module.lessons);
   const targetAudience =
     course.targetAudience.length > 0
       ? course.targetAudience
@@ -232,10 +251,12 @@ export default async function CourseDetailPage({
                   {course.category}
                 </span>
                 <h1 className="mt-4 text-3xl font-bold md:text-4xl">
-                  {course.title}
+                  {course.heroTitle || course.title}
                 </h1>
-                {course.subtitle ? (
-                  <p className="mt-3 text-base font-medium text-blue-200">{course.subtitle}</p>
+                {course.heroSubtitle || course.subtitle ? (
+                  <p className="mt-3 text-base font-medium text-blue-200">
+                    {course.heroSubtitle || course.subtitle}
+                  </p>
                 ) : null}
                 <p className="mt-3 text-lg text-gray-300">
                   {course.description || "講師尚未提供課程介紹。"}
@@ -347,9 +368,11 @@ export default async function CourseDetailPage({
                   {offer.canPurchase ? (
                     <EnrollButton
                       courseId={course.id}
-                      isLoggedIn={!!session}
+                      isLoggedIn={isLoggedIn}
                       isEnrolled={isEnrolled}
                       nextLessonId={nextLessonId}
+                      hasPreviewLessons={hasPreviewLessons}
+                      ctaLabel={course.ctaLabel}
                     />
                   ) : (
                     <SalesLeadCapture
@@ -436,7 +459,7 @@ export default async function CourseDetailPage({
         {/* Introduction */}
         <section id="introduction" className="space-y-4">
           <h2 className="text-2xl font-bold text-gray-900">課程介紹</h2>
-          <p className="text-gray-700">
+          <p className="text-lg font-medium text-slate-700">
             {course.description ||
               "本課程結合理論與實務案例，幫助學員快速掌握核心技能，並提供大量應用範例與練習檔案。"}
           </p>
@@ -535,7 +558,13 @@ export default async function CourseDetailPage({
                         ) : (
                           module.lessons.map((lesson, lessonIndex) => {
                             const lessonNumber = `${moduleIndex + 1}.${String(lessonIndex + 1).padStart(2, "0")}`;
-                            const allowPlayback = lesson.preview || isEnrolled;
+                            const accessState = resolveLessonAccess({
+                              lesson,
+                              module,
+                              isLoggedIn,
+                              isEnrolled,
+                            });
+                            const allowPlayback = accessState !== "hidden";
                             const rawVideoId = allowPlayback
                               ? extractYouTubeId(lesson.videoUrl)
                               : null;
@@ -543,12 +572,12 @@ export default async function CourseDetailPage({
                             const isLessonCompleted = completedLessonSet.has(lesson.id);
                             const isNextLesson = nextLessonId === lesson.id;
 
-                            let statusText = "正式課程";
+                            let statusText = "購買後解鎖";
                             let statusClasses = "border-gray-300 text-gray-500";
-                            if (lesson.preview) {
-                              statusText = "免費試看";
+                            if (accessState === "preview") {
+                              statusText = "試看";
                               statusClasses = "border-blue-500 text-blue-600";
-                            } else if (isEnrolled) {
+                            } else if (accessState === "full") {
                               if (isLessonCompleted) {
                                 statusText = "已完成";
                                 statusClasses = "border-green-500 text-green-600";
@@ -582,11 +611,11 @@ export default async function CourseDetailPage({
                                     </div>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-2">
-                                    <span
-                                      className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusClasses}`}
-                                    >
-                                      {statusText}
-                                    </span>
+                                <span
+                                  className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusClasses}`}
+                                >
+                                  {statusText}
+                                </span>
                                     {isLessonCompleted && (
                                       <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
                                         已完成
@@ -599,19 +628,28 @@ export default async function CourseDetailPage({
                                 </div>
                                 {allowPlayback ? (
                                   videoId ? (
-                                    <VideoEmbed
-                                      videoId={videoId}
-                                      title={`${lesson.title} 課程內容`}
-                                    />
+                                    <div className="space-y-3">
+                                      <VideoEmbed
+                                        videoId={videoId}
+                                        title={`${lesson.title} 課程內容`}
+                                      />
+                                      {accessState === "preview" ? (
+                                        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs font-medium text-blue-800">
+                                          此為試看內容，購買後可解鎖完整章節與學習進度紀錄。
+                                        </div>
+                                      ) : null}
+                                    </div>
                                   ) : (
                                     <p className="text-xs text-gray-500">
                                       講師尚未提供影片，請稍後再試或參考課程補充資料。
                                     </p>
                                   )
                                 ) : (
-                                  <p className="text-xs text-gray-500">
-                                    購買課程後即可觀看完整內容與影片教學。
-                                  </p>
+                                  <div className="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-4 text-xs text-gray-600">
+                                    {!isLoggedIn
+                                      ? "登入後可先試看標記為試看的課程，其餘內容需購買後解鎖。"
+                                      : "此堂內容需購買後解鎖，可先查看其他試看章節或直接前往購買。"}
+                                  </div>
                                 )}
                               </div>
                             );
@@ -690,9 +728,11 @@ export default async function CourseDetailPage({
                   {offer.canPurchase ? (
                     <EnrollButton
                       courseId={course.id}
-                      isLoggedIn={!!session}
+                      isLoggedIn={isLoggedIn}
                       isEnrolled={isEnrolled}
                       nextLessonId={nextLessonId}
+                      hasPreviewLessons={hasPreviewLessons}
+                      ctaLabel={course.ctaLabel}
                     />
                   ) : (
                     <SalesLeadCapture
@@ -820,7 +860,26 @@ export default async function CourseDetailPage({
             </p>
           </div>
         </section>
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+          <h2 className="text-2xl font-bold text-emerald-950">購買保證與支援</h2>
+          <p className="mt-3 text-sm leading-7 text-emerald-900">
+            {course.guaranteeText ||
+              "付款成功後立即開通課程，若遇到金流、開通或內容問題，可透過客服表單提交需求，我們會在工作時間內協助處理。"}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/refund-policy" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-200">
+              退款政策
+            </Link>
+            <Link href="/purchase-guide" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-200">
+              購買須知
+            </Link>
+            <Link href="/contact" className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-200">
+              聯繫客服
+            </Link>
+          </div>
+        </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

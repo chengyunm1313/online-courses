@@ -62,7 +62,7 @@ export default async function Home() {
           {featuredCourses.map((course) => (
             <Link
               key={course.id}
-              href={`/courses/${course.id}`}
+              href={`/courses/${course.slug ?? course.id}`}
               className="bg-white rounded-lg shadow-sm hover:shadow-md transition overflow-hidden group"
             >
               <div className="relative h-48 w-full overflow-hidden">
@@ -72,7 +72,7 @@ export default async function Home() {
                   fill
                   className="object-cover group-hover:scale-105 transition duration-300"
                 />
-                <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full text-sm font-semibold">
+                <div className="absolute top-3 right-3 rounded-full bg-slate-950/90 px-3 py-1.5 text-sm font-semibold text-white shadow-lg ring-1 ring-white/20 backdrop-blur-sm">
                   NT$ {course.price.toLocaleString()}
                 </div>
               </div>
@@ -136,17 +136,25 @@ export default async function Home() {
       </div>
 
       {/* Features Section */}
-      <div className="bg-white py-16">
+      <div className="bg-slate-100 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            為什麼選擇我們
-          </h2>
+          <div className="mx-auto mb-12 max-w-3xl text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-700">
+              Platform Advantage
+            </p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
+              為什麼選擇我們
+            </h2>
+            <p className="mt-4 text-base leading-7 text-slate-700">
+              不只提供課程，而是把學習設計成更容易開始、更容易完成，也更容易實際用在工作上的體驗。
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 shadow-inner">
                 <svg
-                  className="w-8 h-8 text-blue-600"
+                  className="h-8 w-8 text-blue-700"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -159,16 +167,19 @@ export default async function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">豐富課程</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-slate-950">豐富課程</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-700">
                 涵蓋多個領域的優質課程，滿足不同學習需求
+              </p>
+              <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                多領域主題 × 可立即上手
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-100 shadow-inner">
                 <svg
-                  className="w-8 h-8 text-blue-600"
+                  className="h-8 w-8 text-cyan-700"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -181,16 +192,19 @@ export default async function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">彈性學習</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-slate-950">彈性學習</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-700">
                 隨時隨地學習，按照自己的步調掌握知識
+              </p>
+              <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                自主安排節奏 × 不中斷複習
               </p>
             </div>
 
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-100 shadow-inner">
                 <svg
-                  className="w-8 h-8 text-blue-600"
+                  className="h-8 w-8 text-indigo-700"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -203,9 +217,12 @@ export default async function Home() {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">專業講師</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold text-slate-950">專業講師</h3>
+              <p className="mt-3 text-sm leading-7 text-slate-700">
                 由業界專家親自授課，分享實戰經驗
+              </p>
+              <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                實戰導向內容 × 更貼近工作場景
               </p>
             </div>
           </div>

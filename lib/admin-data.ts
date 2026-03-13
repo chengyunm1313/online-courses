@@ -44,6 +44,10 @@ export interface AdminCourseSummary {
 
 export interface AdminCourseDetail extends AdminCourseSummary {
   description: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  guaranteeText?: string;
+  ctaLabel?: string;
   thumbnail?: string;
   ogImage?: string;
   duration?: number;
@@ -81,6 +85,7 @@ export interface AdminCourseLesson {
   order: number;
   videoUrl?: string;
   preview?: boolean;
+  previewOverride?: "inherit" | "preview" | "locked";
 }
 
 export interface AdminCourseModule {
@@ -88,6 +93,7 @@ export interface AdminCourseModule {
   title: string;
   description?: string;
   order: number;
+  previewMode?: "locked" | "preview";
   lessons: AdminCourseLesson[];
 }
 
@@ -119,6 +125,10 @@ export interface AdminCourseInput {
   title: string;
   subtitle?: string;
   slug?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  guaranteeText?: string;
+  ctaLabel?: string;
   status?: "draft" | "published" | "archived";
   description?: string;
   thumbnail?: string;
@@ -266,6 +276,10 @@ export function normalizeAdminCourseInput(body: Record<string, unknown>): AdminC
     title: String(body.title ?? "").trim(),
     subtitle: typeof body.subtitle === "string" ? body.subtitle.trim() : "",
     slug: typeof body.slug === "string" ? body.slug.trim() : "",
+    heroTitle: typeof body.heroTitle === "string" ? body.heroTitle.trim() : "",
+    heroSubtitle: typeof body.heroSubtitle === "string" ? body.heroSubtitle.trim() : "",
+    guaranteeText: typeof body.guaranteeText === "string" ? body.guaranteeText.trim() : "",
+    ctaLabel: typeof body.ctaLabel === "string" ? body.ctaLabel.trim() : "",
     status:
       body.status === "draft" || body.status === "published" || body.status === "archived"
         ? body.status
@@ -396,6 +410,7 @@ function buildModules(input: AdminCourseInput): CourseModule[] {
       title: module.title || `章節 ${moduleIndex + 1}`,
       description: module.description,
       order: module.order || moduleIndex + 1,
+      previewMode: module.previewMode ?? "locked",
       lessons: (module.lessons ?? []).map((lesson, lessonIndex) => ({
         id: lesson.id || `lesson-${moduleIndex + 1}-${lessonIndex + 1}`,
         title: lesson.title,
@@ -404,6 +419,7 @@ function buildModules(input: AdminCourseInput): CourseModule[] {
         order: lesson.order || lessonIndex + 1,
         videoUrl: lesson.videoUrl,
         preview: Boolean(lesson.preview),
+        previewOverride: lesson.previewOverride ?? (lesson.preview ? "preview" : "inherit"),
       })),
     }));
   }
@@ -415,6 +431,7 @@ function buildModules(input: AdminCourseInput): CourseModule[] {
         id: "module-1",
         title: "課程內容",
         order: 1,
+        previewMode: "locked",
         lessons: syllabus.map((lesson, lessonIndex) => ({
           id: lesson.id || `lesson-${lessonIndex + 1}`,
           title: lesson.title,
@@ -423,6 +440,7 @@ function buildModules(input: AdminCourseInput): CourseModule[] {
           order: lesson.order || lessonIndex + 1,
           videoUrl: lesson.videoUrl,
           preview: Boolean(lesson.preview),
+          previewOverride: lesson.preview ? "preview" : "inherit",
         })),
       },
     ];
@@ -481,6 +499,10 @@ function mapCourseDetail(
   return {
     ...mapCourseSummary(course, enrollmentCount),
     description: course.description,
+    heroTitle: course.heroTitle,
+    heroSubtitle: course.heroSubtitle,
+    guaranteeText: course.guaranteeText,
+    ctaLabel: course.ctaLabel,
     thumbnail: course.thumbnail,
     ogImage: course.ogImage,
     duration: course.duration,
@@ -620,6 +642,10 @@ export async function createCourseForManagement(
     title: input.title.trim(),
     subtitle: input.subtitle?.trim() || undefined,
     slug: input.slug?.trim() || undefined,
+    heroTitle: input.heroTitle?.trim() || input.title.trim(),
+    heroSubtitle: input.heroSubtitle?.trim() || input.subtitle?.trim() || undefined,
+    guaranteeText: input.guaranteeText?.trim() || undefined,
+    ctaLabel: input.ctaLabel?.trim() || undefined,
     status: input.status ?? (input.published ? "published" : "draft"),
     description: input.description?.trim() ?? "",
     thumbnail: input.thumbnail?.trim() || undefined,
@@ -696,6 +722,11 @@ export async function updateCourseForManagement(
     title: input.title.trim(),
     subtitle: input.subtitle?.trim() || undefined,
     slug: input.slug?.trim() || existing.slug,
+    heroTitle: input.heroTitle?.trim() || existing.heroTitle || input.title.trim(),
+    heroSubtitle:
+      input.heroSubtitle?.trim() || existing.heroSubtitle || input.subtitle?.trim() || undefined,
+    guaranteeText: input.guaranteeText?.trim() || existing.guaranteeText,
+    ctaLabel: input.ctaLabel?.trim() || existing.ctaLabel,
     status: input.status ?? (input.published ? "published" : existing.status),
     description: input.description?.trim() ?? "",
     thumbnail: input.thumbnail?.trim() || undefined,

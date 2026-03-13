@@ -8,6 +8,7 @@ type CourseLevel = "beginner" | "intermediate" | "advanced";
 
 export interface CourseCatalogCourse {
   id: string;
+  slug?: string;
   title: string;
   description: string;
   thumbnail: string;
@@ -288,7 +289,7 @@ export default function CourseCatalog({ courses }: CourseCatalogProps) {
               {filteredCourses.map((course) => (
                 <Link
                   key={course.id}
-                  href={`/courses/${course.id}`}
+                  href={`/courses/${course.slug ?? course.id}`}
                   className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
                 >
                   <div className="relative h-44 w-full overflow-hidden">
