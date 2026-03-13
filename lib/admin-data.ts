@@ -160,9 +160,25 @@ export interface ActivityItem {
 }
 
 export interface AdminReportData {
+  kpis: {
+    grossRevenue: number;
+    netRevenue: number;
+    discountGiven: number;
+    paymentSuccessRate: number;
+    refundRate: number;
+    paidOrderCount: number;
+    refundedOrderCount: number;
+  };
   revenueByMonth: RevenueByMonth[];
   dailyEnrollments: DailyEnrollment[];
   topCoursesByRevenue: (AdminCourseSummary & { revenue: number })[];
+  topDiscounts: Array<{
+    id: string;
+    code: string;
+    usageCount: number;
+    valueLabel: string;
+    enabled: boolean;
+  }>;
   categoryBreakdown: {
     category: string;
     courseCount: number;
@@ -617,12 +633,19 @@ export async function getInstructorCourses(
 }
 
 export async function getAdminReportData(): Promise<AdminReportData> {
-  const [courses, orders] = await Promise.all([
+  const [courses, orders, discounts] = await Promise.all([
     listAllCoursesFromStore(),
     listOrdersFromStore(),
+    listDiscountsFromStore(),
   ]);
 
   const paidOrders = orders.filter((order) => order.status === "PAID" || order.status === "completed");
+  const refundedOrders = orders.filter((order) =>
+    order.refundStatus === "requested" ||
+    order.refundStatus === "processing" ||
+    order.refundStatus === "refunded" ||
+    order.status === "refunded",
+  );
   const revenueByMonthMap = new Map<string, RevenueByMonth>();
   const dailyEnrollmentsMap = new Map<string, DailyEnrollment>();
   const courseRevenueMap = new Map<string, number>();
@@ -660,10 +683,39 @@ export async function getAdminReportData(): Promise<AdminReportData> {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10);
 
+  const grossRevenue = paidOrders.reduce((sum, order) => sum + order.subtotal + order.tax, 0);
+  const netRevenue = paidOrders.reduce((sum, order) => sum + order.total, 0);
+  const discountGiven = paidOrders.reduce((sum, order) => sum + order.discountAmount, 0);
+  const paymentSuccessRate = orders.length > 0 ? paidOrders.length / orders.length : 0;
+  const refundRate = paidOrders.length > 0 ? refundedOrders.length / paidOrders.length : 0;
+  const topDiscounts = discounts
+    .sort((a, b) => b.usageCount - a.usageCount || a.code.localeCompare(b.code))
+    .slice(0, 10)
+    .map((discount) => ({
+      id: discount.id,
+      code: discount.code,
+      usageCount: discount.usageCount,
+      valueLabel:
+        discount.type === "percentage"
+          ? `${discount.value}%`
+          : `NT$ ${discount.value.toLocaleString("zh-TW")}`,
+      enabled: discount.enabled,
+    }));
+
   return {
+    kpis: {
+      grossRevenue,
+      netRevenue,
+      discountGiven,
+      paymentSuccessRate,
+      refundRate,
+      paidOrderCount: paidOrders.length,
+      refundedOrderCount: refundedOrders.length,
+    },
     revenueByMonth: Array.from(revenueByMonthMap.values()).sort((a, b) => a.month.localeCompare(b.month)),
     dailyEnrollments: Array.from(dailyEnrollmentsMap.values()).sort((a, b) => a.date.localeCompare(b.date)),
     topCoursesByRevenue,
+    topDiscounts,
     categoryBreakdown: Array.from(categoryMap.entries()).map(([category, data]) => ({
       category,
       courseCount: data.courseCount,

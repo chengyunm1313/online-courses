@@ -16,6 +16,10 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("zh-TW").format(value);
 }
 
+function formatPercent(value: number) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
 export default async function AdminReportsPage() {
   const session = await getServerSession(authOptions);
 
@@ -37,9 +41,111 @@ export default async function AdminReportsPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-gray-900">營運報表</h1>
           <p className="text-sm text-gray-600">
-            綜觀營收趨勢、每日報名與課程成效，協助您掌握平台成長情況。
+            聚焦銷售、退款與折扣成效，協助您快速判斷目前營運狀態。
           </p>
         </div>
+
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">淨營收</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              {formatCurrency(report.kpis.netRevenue)}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              已付款 {formatNumber(report.kpis.paidOrderCount)} 筆，原價營收 {formatCurrency(report.kpis.grossRevenue)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">付款成功率</p>
+            <p className="mt-2 text-3xl font-bold text-emerald-600">
+              {formatPercent(report.kpis.paymentSuccessRate)}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              以全部訂單為分母計算，用來觀察結帳完成品質。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">退款率</p>
+            <p className="mt-2 text-3xl font-bold text-amber-600">
+              {formatPercent(report.kpis.refundRate)}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              已申請 / 處理中 / 已退款共 {formatNumber(report.kpis.refundedOrderCount)} 筆。
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-medium text-slate-500">折扣讓利</p>
+            <p className="mt-2 text-3xl font-bold text-blue-600">
+              {formatCurrency(report.kpis.discountGiven)}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              累積折扣金額，可用來評估活動成本。
+            </p>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900">折扣碼使用排行</h2>
+            <p className="text-xs text-gray-500">
+              依使用次數排序，快速判斷哪些促銷活動真的有被用到。
+            </p>
+            <div className="mt-4 space-y-3">
+              {report.topDiscounts.length === 0 ? (
+                <p className="text-sm text-gray-600">目前還沒有任何折扣碼資料。</p>
+              ) : (
+                <ol className="space-y-3 text-sm text-gray-700">
+                  {report.topDiscounts.map((discount, index) => (
+                    <li
+                      key={discount.id}
+                      className="flex items-center justify-between rounded-md border border-gray-100 bg-gray-50 px-3 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-semibold text-blue-600">#{index + 1}</span>
+                        <div>
+                          <p className="font-semibold text-gray-900">{discount.code}</p>
+                          <p className="text-xs text-gray-500">
+                            {discount.valueLabel} • {discount.enabled ? "啟用中" : "已停用"}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold text-slate-900">
+                        {formatNumber(discount.usageCount)} 次
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900">營運判讀</h2>
+            <p className="text-xs text-gray-500">
+              用目前的訂單資料，先給管理後台一個能直接行動的摘要。
+            </p>
+            <div className="mt-4 space-y-3 text-sm text-gray-700">
+              <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+                <p className="font-semibold text-gray-900">付款狀態</p>
+                <p className="mt-1">
+                  目前付款成功率為 {formatPercent(report.kpis.paymentSuccessRate)}，若持續低於 70%，建議優先檢查結帳文案、金流選項與付款失敗原因。
+                </p>
+              </div>
+              <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+                <p className="font-semibold text-gray-900">退款風險</p>
+                <p className="mt-1">
+                  目前退款率為 {formatPercent(report.kpis.refundRate)}，若上升，應先交叉檢查課程銷售頁承諾、付款後交付內容與客服回應速度。
+                </p>
+              </div>
+              <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+                <p className="font-semibold text-gray-900">促銷成本</p>
+                <p className="mt-1">
+                  累積折扣讓利 {formatCurrency(report.kpis.discountGiven)}。如果折扣碼使用次數高，但淨營收沒有跟著成長，代表活動結構需要重調。
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
