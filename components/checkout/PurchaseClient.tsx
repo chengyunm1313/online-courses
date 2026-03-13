@@ -27,13 +27,6 @@ interface DiscountResponse {
   message?: string;
 }
 
-const defaultBankInfo = {
-  bankName: "範例銀行",
-  bankCode: "999",
-  accountName: "線上學院股份有限公司",
-  accountNumber: "1234567890123",
-};
-
 export default function PurchaseClient({ course }: PurchaseClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -94,6 +87,8 @@ export default function PurchaseClient({ course }: PurchaseClientProps) {
 
       // 將購物車資料存儲到 sessionStorage
       const cartData = {
+        courseIds: [course.id],
+        discountCode: appliedCode ?? undefined,
         items: [
           {
             courseId: course.id,

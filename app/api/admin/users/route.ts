@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { adminDb } from "@/lib/firebase-admin";
+import { requireRole } from "@/lib/session";
+import { updateAppUserRole, type AppRole } from "@/lib/d1-repository";
 
 const UPDATABLE_ROLES = new Set(["instructor", "student"]);
 
@@ -10,10 +9,9 @@ const UPDATABLE_ROLES = new Set(["instructor", "student"]);
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user?.role !== "admin") {
-      return NextResponse.json({ error: "沒有權限執行此操作" }, { status: 403 });
+    const sessionResult = await requireRole(["admin"]);
+    if ("error" in sessionResult) {
+      return sessionResult.error;
     }
 
     const { userId, role } = await request.json();
@@ -29,13 +27,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    await adminDb.collection("users").doc(userId).set(
-      {
-        role,
-        updatedAt: new Date(),
-      },
-      { merge: true },
-    );
+    await updateAppUserRole(userId, role as AppRole);
 
     return NextResponse.json({ success: true });
   } catch (error) {

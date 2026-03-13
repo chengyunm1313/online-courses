@@ -1,22 +1,8 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { FirestoreAdapter } from "@auth/firebase-adapter";
-import { adminDb } from "./firebase-admin";
-
-/**
- * Auth.js (NextAuth.js) 設定
- * - 透過 Firestore Adapter 儲存會話資料
- * - 所有驗證流程皆在伺服器側處理
- */
-
-const INSTRUCTOR_EMAILS = new Set([
-  "skypassion5000@gmail.com",
-  "chengyunm1313@gmail.com"
-]);
+import { ensureAppUser } from "@/lib/d1-repository";
 
 export const authOptions: NextAuthOptions = {
-  adapter: FirestoreAdapter(adminDb),
-
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -25,53 +11,82 @@ export const authOptions: NextAuthOptions = {
         params: {
           prompt: "consent",
           access_type: "offline",
-          response_type: "code"
-        }
-      }
+          response_type: "code",
+        },
+      },
     }),
   ],
 
   pages: {
-    signIn: '/auth/test',
-    error: '/auth/error',
+    signIn: "/auth/test",
+    error: "/auth/error",
   },
 
   session: {
-    strategy: "database",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // 24 hours
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   callbacks: {
-    async session({ session, user }) {
-      // 將使用者 ID 與角色資訊放入會話物件
-      if (session.user) {
-        session.user.id = user.id;
-        const storedRole = (user as { role?: string }).role;
-        const email = session.user.email?.toLowerCase();
-        const isInstructor = email ? INSTRUCTOR_EMAILS.has(email) : false;
+    async jwt({ token, user, profile }) {
+      const email =
+        user?.email ??
+        token.email ??
+        (typeof profile?.email === "string" ? profile.email : undefined);
 
-        // 確保 role 是正確的類型
-        if (isInstructor) {
-          session.user.role = "admin";
-        } else if (storedRole === "student" || storedRole === "instructor" || storedRole === "admin") {
-          session.user.role = storedRole;
-        } else {
-          session.user.role = "student";
-        }
+      if (!token.sub || !email) {
+        return token;
+      }
+
+      const appUser = await ensureAppUser({
+        id: token.sub,
+        email,
+        name:
+          user?.name ??
+          token.name ??
+          (typeof profile?.name === "string" ? profile.name : undefined),
+        image:
+          user?.image ??
+          (typeof token.picture === "string" ? token.picture : undefined),
+      });
+
+      token.role = appUser.role;
+      token.email = appUser.email;
+      token.name = appUser.name;
+      if (appUser.image) {
+        token.picture = appUser.image;
+      }
+
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (session.user && token.sub) {
+        session.user.id = token.sub;
+        session.user.role =
+          token.role === "admin" || token.role === "instructor" || token.role === "student"
+            ? token.role
+            : "student";
+        session.user.email = typeof token.email === "string" ? token.email : session.user.email;
+        session.user.name = typeof token.name === "string" ? token.name : session.user.name;
+        session.user.image = typeof token.picture === "string" ? token.picture : session.user.image;
       }
       return session;
     },
+
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url;
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
       return baseUrl;
     },
   },
 
-  debug: process.env.NODE_ENV === 'development',
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
 };
 
 const handler = NextAuth(authOptions);

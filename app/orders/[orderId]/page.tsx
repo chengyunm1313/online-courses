@@ -9,6 +9,10 @@ import type { OrderItem } from "@/types/order";
 
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
+    PAID: "已付款",
+    CREATED: "待付款",
+    FAILED: "付款失敗",
+    CANCELED: "已取消",
     completed: "已完成",
     pending: "處理中",
     cancelled: "已取消",
@@ -19,6 +23,10 @@ function statusLabel(status: string) {
 
 function statusClass(status: string) {
   const map: Record<string, string> = {
+    PAID: "bg-green-100 text-green-700",
+    CREATED: "bg-yellow-100 text-yellow-700",
+    FAILED: "bg-red-100 text-red-700",
+    CANCELED: "bg-red-100 text-red-700",
     completed: "bg-green-100 text-green-700",
     pending: "bg-yellow-100 text-yellow-700",
     cancelled: "bg-red-100 text-red-700",
@@ -41,6 +49,8 @@ function formatDate(value?: Date | string) {
 
 function paymentMethodLabel(method: string) {
   const labels: Record<string, string> = {
+    CREDIT: "信用卡",
+    ATM: "ATM 轉帳",
     credit_card: "信用卡",
     paypal: "PayPal",
     bank_transfer: "銀行轉帳",
@@ -174,7 +184,7 @@ export default async function OrderDetailPage({
                       >
                         查看課程
                       </Link>
-                      {order.status === "completed" ? (
+                      {order.status === "completed" || order.status === "PAID" ? (
                         <Link
                           href="/learning"
                           className="rounded-md border border-blue-500 px-3 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50"

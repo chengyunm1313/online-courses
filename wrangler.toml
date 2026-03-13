@@ -1,0 +1,17 @@
+name = "online-courses"
+main = ".open-next/worker.js"
+compatibility_date = "2026-03-13"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "online-courses"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[vars]
+APP_BASE_URL = "https://your-domain.example.com"
+ECPAY_CASHIER_URL = "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5"

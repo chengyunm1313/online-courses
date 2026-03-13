@@ -15,7 +15,6 @@ export default function AdminOrdersPage() {
     completedOrders: 0,
     averageOrderValue: 0,
   });
-  const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<OrderStatus | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -33,7 +32,7 @@ export default function AdminOrdersPage() {
       } catch (error) {
         console.error("Error fetching orders:", error);
       } finally {
-        setLoading(false);
+        // 已保留資料載入流程，頁面目前不額外顯示 loading skeleton。
       }
     }
     fetchOrders();
@@ -191,6 +190,9 @@ export default function AdminOrdersPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="all">全部狀態</option>
+                <option value="PAID">已付款</option>
+                <option value="CREATED">待付款</option>
+                <option value="FAILED">付款失敗</option>
                 <option value="completed">已完成</option>
                 <option value="pending">處理中</option>
                 <option value="cancelled">已取消</option>

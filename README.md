@@ -1,24 +1,32 @@
 ## 專案簡介
 
-本專案為 Next.js 17（App Router + Turbopack）打造的線上課程平台示範，提供課程瀏覽、講師後台、學員學習清單，以及完整的「折扣碼 ➜ 結帳 ➜ ATM 匯款」購買流程。所有 demo 課程會自動同步到 Firestore，並預設綁定講師 **skypassion5000@gmail.com**，方便實測報名與後台管理。
+本專案為 Next.js App Router 打造的線上課程平台示範，提供課程瀏覽、講師後台、學員學習清單，以及完整的「折扣碼 ➜ 結帳 ➜ 金流回寫」購買流程。應用資料現已以 Cloudflare D1 為主，並預設建立 demo 講師 **skypassion5000@gmail.com** 與 demo 管理員 **chengyunm1313@gmail.com**，方便實測報名與後台管理。
+
+## 目前架構重點
+
+- Google 登入：使用 Firebase / Google OAuth，僅處理身分驗證
+- 應用資料庫：改為 Cloudflare D1，負責 `users`、`courses`、`orders`、`enrollments`、`order_events`
+- 通知寄信：由 Cloudflare 端直接呼叫 Gmail API
+- 金流：ECPay callback / result 都會驗證簽章，並比對 `TradeAmt` 與資料庫訂單金額
+- 權限來源：只看 D1 `users.role`，不再使用硬編碼 email 升權
 
 ## 本次更新重點
 
-- Firestore 課程文件新增 `modules`（章節 + 課程清單），與既有 `syllabus` 自動同步，確保前台、後台與舊元件都能使用
+- D1 課程資料支援 `modules`（章節 + 課程清單），並會同步輸出 `syllabus` 給舊畫面使用
 - 後台 `CourseForm` 支援章節與課程內容編輯：可設定排序、影片網址與免費試看，並自動換算課程總堂數與時數
 - 課程詳情頁 `/courses/[id]` 以章節呈現目錄與試看影片，並提供正式課程提示與錨點，方便從學習頁跳轉
 - 學員「我的學習」頁 `/learning` 顯示章節完成狀態、下一堂課提醒與前往章節的連結
-- Demo 匯入腳本與 README 已更新，啟動時會把章節資料寫入 Firestore，減少手動維護成本
+- Demo 匯入腳本與 README 已更新，啟動時會把章節資料寫入 D1，減少手動維護成本
 
 ## 開發環境
 
 | 項目 | 版本 |
 | --- | --- |
 | Node.js | 18+ |
-| Next.js | 17 (App Router) |
+| Next.js | 15.5.x (App Router) |
 | UI 套件 | Tailwind CSS |
 | 驗證 | NextAuth (Google OAuth) |
-| 後端儲存 | Firebase Firestore（Admin SDK） |
+| 後端儲存 | Cloudflare D1 |
 
 ```bash
 npm install
@@ -26,17 +34,44 @@ npm run dev
 # 伺服器預設在 http://localhost:3000
 ```
 
+### Cloudflare 預覽與部署
+
+```bash
+npm run cf:build
+npm run cf:preview
+npm run cf:deploy
+```
+
+### 環境變數
+
+- 請以 [.env.example](.env.example) 建立本機 `.env.local`
+- 正式部署時請改用 Cloudflare secrets / vars 管理，不要提交實際密鑰
+
+### D1 資料庫初始化
+
+1. 將 [db/schema.sql](db/schema.sql) 套用到 Cloudflare D1
+2. 若要搬移舊 Firestore 資料，執行：
+
+```bash
+npm run db:migrate:firestore-to-d1
+```
+
+### Cloudflare 佈署骨架
+
+- 已提供 [wrangler.toml](wrangler.toml) 作為 D1 / Worker 綁定範本
+- `database_id`、`APP_BASE_URL` 與所有 secrets 需依實際環境填入
+
 ## 主要路由功能
 
 | 路徑 | 權限 | 說明 |
 | --- | --- | --- |
-| `/` | 公開 | 首頁，展示精選課程，資料來自 Firestore，同步 demo 課程時會自動匯入。 |
+| `/` | 公開 | 首頁，展示精選課程，資料來自 D1。 |
 | `/courses` | 公開 | 課程列表，可依分類、難度、價格、關鍵字與排序（熱門、最新、價格）搜尋。 |
 | `/courses/[id]` | 公開 | 課程詳情頁，章節若含影片網址會自動嵌入，按「立即購買」進入購買流程。 |
 | `/purchase/[courseId]` | 登入學員 | 購買頁，可輸入折扣碼試算金額，確認後進入綠界結帳頁。 |
 | `/checkout/ecpay` | 登入學員 | 綠界金流結帳頁，選擇支付方式（信用卡或 ATM），並輸入選配的訂單備註。 |
 | `/order/[id]/result` | 登入學員 | 訂單確認頁，顯示支付結果、訂單摘要與相應的支付資訊。 |
-| `/learning` | 登入學員 | 實際讀取 Firestore，顯示學員已購課程與進度。 |
+| `/learning` | 登入學員 | 實際讀取 D1，顯示學員已購課程與進度。 |
 | `/admin` | 管理員 | 後台儀表板，含課程列表、講師統計、帳號權限管理。 |
 | `/admin/courses` | 管理員 | 課程 CRUD，預設講師下拉會帶入 demo 講師（skypassion5000@gmail.com）。 |
 | `/instructor/courses` | 講師 | 講師專屬課程管理（限講師角色）。 |
@@ -75,15 +110,15 @@ npm run dev
 
 ## Demo 課程與資料同步
 
-- 首次啟動時，`lib/public-courses.ts` 會確保 demo 課程寫入 Firestore（集合：`courses`），並自動建立講師帳號 `skypassion5000@gmail.com`
+- 首次啟動時，`lib/d1-repository.ts` 會確保 demo 課程寫入 D1，並自動建立 demo 講師與 demo 管理員帳號
 - 課程章節、標籤、學生人數等欄位也會一併帶入，方便測試報名功能
 - 每門課程會儲存 `modules`（章節 + 課程清單）與 `syllabus`（扁平章節）兩種結構，後台表單會依章節內容自動同步，確保前台與舊版元件皆可使用
 - 匯入 demo 課程時會依章節時數自動換算課程總時數與堂數，避免手動維護錯誤
-- 後台顯示的所有課程資訊都來自 Firestore，請勿手動刪除 demo 講師帳號
+- 後台顯示的所有課程資訊都來自 D1，請勿手動刪除 demo 講師帳號
 
-## Firestore 課程資料結構
+## 課程資料結構
 
-`courses/{courseId}` 文件會同步保存章節與課程清單，下方為主要欄位示意：
+D1 中 `courses`、`course_modules`、`course_lessons` 會共同保存章節與課程清單，下方為聚合後的主要欄位示意：
 
 ```json
 {
@@ -127,7 +162,7 @@ npm run dev
 
 | 帳號 | 用途 |
 | --- | --- |
-| `skypassion5000@gmail.com` | Demo 講師（預設就是為他建立課程） |
+| `skypassion5000@gmail.com` | Demo 講師（預設課程建立者） |
 | `chengyunm1313@gmail.com` | 預設管理員，可存取 `/admin` |
 
 > 認證使用 Google OAuth，測試前請在 `.env.local` 填入對應的 OAuth Client ID/Secret。
@@ -205,7 +240,7 @@ APP_BASE_URL=http://localhost:3000
 
 ## 開發注意事項
 
-- 所有資料讀寫皆透過 Firebase Admin SDK（請確認環境變數 `FIREBASE_*` 設定完整）
+- 所有應用資料讀寫皆透過 Cloudflare D1；Firebase 僅保留 Google 登入與舊資料遷移用途
 - 綠界金流已完整整合，包含簽章驗證、支付狀態同步與訂單管理
 - 課程同步與折扣碼為 demo 範例，正式上線請改為實際後端邏輯
 - 所有敏感資訊（ECPAY_HASH_KEY、ECPAY_HASH_IV 等）請存入環境變數，勿提交至版本控制
@@ -228,7 +263,7 @@ APP_BASE_URL=http://localhost:3000
 5. **驗證訂單確認頁**（`/order/[id]/result`）：
    - 確認訂單狀態為「已支付」
    - 檢查支付資訊正確顯示
-   - 確認 Firestore `orders` 集合有記錄訂單
+   - 確認 D1 `orders` / `order_items` 資料已建立
 6. **回到「我的學習」頁面** (`/learning`)：
    - 檢查新購課程是否出現在清單
    - 驗證課程進度與章節資訊

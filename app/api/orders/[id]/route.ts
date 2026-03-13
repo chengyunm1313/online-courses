@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { adminDb } from '@/lib/firebase-admin';
+import { getOrderById } from '@/lib/orders';
 
 /**
  * GET /api/orders/[id]
  * 取得單個訂單詳情
  */
 export async function GET(
-  request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -24,21 +24,17 @@ export async function GET(
 
     const orderId = id;
 
-    // 從 Firestore 取得訂單
-    const orderDoc = await adminDb.collection('orders').doc(orderId).get();
-
-    if (!orderDoc.exists) {
+    const order = await getOrderById(orderId);
+    if (!order) {
       return NextResponse.json(
         { error: '訂單不存在' },
         { status: 404 }
       );
     }
 
-    const orderData = orderDoc.data();
-
     // 檢查權限：只允許訂單所有者和管理員查看
     if (
-      orderData?.userId !== session.user.id &&
+      order.userId !== session.user.id &&
       session.user.role !== 'admin'
     ) {
       return NextResponse.json(
@@ -49,11 +45,10 @@ export async function GET(
 
     // 返回訂單資料
     return NextResponse.json({
-      id: orderId,
-      ...orderData,
-      createdAt: orderData?.createdAt?.toDate?.().toISOString() || new Date().toISOString(),
-      updatedAt: orderData?.updatedAt?.toDate?.().toISOString() || new Date().toISOString(),
-      paidAt: orderData?.paidAt?.toDate?.().toISOString(),
+      ...order,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
+      paidAt: order.paidAt?.toISOString(),
     });
   } catch (error) {
     console.error('Error fetching order:', error);

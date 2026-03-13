@@ -1,172 +1,138 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { adminDb } from '@/lib/firebase-admin';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { evaluateDiscount } from "@/lib/checkout";
+import { createOrderRecord } from "@/lib/d1-repository";
 import {
-  getECPayConfig,
   generateCheckMacValue,
   generateMerchantTradeNo,
-  generateECPayForm,
+  getECPayConfig,
   prepareECPayParams,
-} from '@/lib/ecpay';
+} from "@/lib/ecpay";
+import { getPublishedCourseById } from "@/lib/public-courses";
+import { sendOrderCreatedEmail } from "@/lib/notifications";
+import { sanitizeLogContext } from "@/lib/logging";
 
-/**
- * POST /api/checkout/ecpay
- * 建立綠界結帳訂單並返回支付表單或 ATM 重定向 URL
- */
+interface CheckoutRequestBody {
+  courseId?: string;
+  courseIds?: string[];
+  paymentMethod?: "CREDIT" | "ATM";
+  shippingMethod?: "HOME" | "STORE";
+  discountCode?: string;
+  notes?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // 驗證用戶登入
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: '請先登入' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
-    // 解析請求體
-    const body = await request.json() as {
-      items?: Array<{courseTitle: string; price: number}>;
-      paymentMethod?: 'CREDIT' | 'ATM';
-      shippingMethod?: 'HOME' | 'STORE';
-      subtotal?: number;
-      tax?: number;
-      total?: number;
-      notes?: string;
-    };
-    const {
-      items,
-      paymentMethod = 'CREDIT',
-      shippingMethod = 'HOME',
-      subtotal = 0,
-      tax = 0,
-      total = 0,
-      notes,
-    } = body;
+    const body = (await request.json()) as CheckoutRequestBody;
+    const courseIds = Array.from(
+      new Set(
+        [
+          ...(body.courseId ? [body.courseId] : []),
+          ...((body.courseIds ?? []).filter((courseId) => typeof courseId === "string")),
+        ].filter(Boolean),
+      ),
+    );
 
-    // 驗證必填欄位
-    if (!items || items.length === 0) {
-      return NextResponse.json(
-        { error: '購物車為空' },
-        { status: 400 }
-      );
+    if (courseIds.length === 0) {
+      return NextResponse.json({ error: "請至少選擇一門課程" }, { status: 400 });
     }
 
-    if (!total || total <= 0) {
-      return NextResponse.json(
-        { error: '訂單金額無效' },
-        { status: 400 }
-      );
+    const courses = await Promise.all(courseIds.map((courseId) => getPublishedCourseById(courseId)));
+    if (courses.some((course) => !course)) {
+      return NextResponse.json({ error: "課程不存在或未上架" }, { status: 404 });
     }
 
-    // 取得 ECPay 設定
-    const config = getECPayConfig();
-    const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:3000';
+    const resolvedCourses = courses.filter((course): course is NonNullable<typeof course> => Boolean(course));
+    const subtotal = resolvedCourses.reduce((sum, course) => sum + course.price, 0);
+    const discount = evaluateDiscount(subtotal, body.discountCode);
+    if (!discount.valid) {
+      return NextResponse.json({ error: discount.message }, { status: 400 });
+    }
 
-    // 生成商家交易編號
+    const total = discount.finalPrice;
+    const paymentMethod = body.paymentMethod === "ATM" ? "ATM" : "CREDIT";
+    const shippingMethod = body.shippingMethod === "STORE" ? "STORE" : "HOME";
     const merchantTradeNo = generateMerchantTradeNo();
 
-    // 建立訂單到 Firestore
-    const orderData: Record<string, unknown> = {
+    const orderId = await createOrderRecord({
       userId: session.user.id,
-      userName: session.user.name || '',
-      userEmail: session.user.email || '',
-      items,
+      userName: session.user.name ?? "",
+      userEmail: session.user.email ?? "",
+      items: resolvedCourses.map((course) => ({
+        courseId: course.id,
+        courseTitle: course.title,
+        courseThumbnail: course.thumbnail,
+        instructor: course.instructor.name,
+        price: course.price,
+      })),
       subtotal,
-      tax,
+      tax: 0,
       total,
-      status: 'CREATED' as const,
+      status: "CREATED",
       paymentMethod,
       shippingMethod,
       merchantTradeNo,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    // 只在 notes 有值時才添加
-    if (notes) {
-      orderData.notes = notes;
-    }
-
-    const orderRef = await adminDb.collection('orders').add(orderData);
-    const orderId = orderRef.id;
-
-    console.log('[Checkout] 訂單已建立:', {
-      orderId,
-      merchantTradeNo,
-      total,
-      paymentMethod,
+      notes: body.notes?.trim() || discount.code ? [body.notes?.trim(), discount.code ? `折扣碼: ${discount.code}` : ""].filter(Boolean).join("\n") : undefined,
     });
 
-    // 若為 ATM 轉帳，直接返回重定向 URL
-    if (paymentMethod === 'ATM') {
+    if (session.user.email) {
+      void sendOrderCreatedEmail({
+        orderId,
+        to: session.user.email,
+        courseTitles: resolvedCourses.map((course) => course.title),
+        total,
+      });
+    }
+
+    console.log("[checkout] order created", sanitizeLogContext({
+      orderId,
+      merchantTradeNo,
+      paymentMethod,
+      courseCount: resolvedCourses.length,
+      total,
+    }));
+
+    if (paymentMethod === "ATM") {
       return NextResponse.json({
         orderId,
-        merchantTradeNo,
         redirectUrl: `/order/${orderId}/result?payment=atm`,
       });
     }
 
-    // 信用卡流程：準備 ECPay AIO 參數
-    const itemNames = items.map((item: {courseTitle: string; price: number}) => item.courseTitle).join(', ');
+    const config = getECPayConfig();
+    const appBaseUrl = process.env.APP_BASE_URL || "http://localhost:3000";
     const ecpayParams = prepareECPayParams(
       merchantTradeNo,
       Math.round(total),
-      itemNames.substring(0, 200),
+      resolvedCourses.map((course) => course.title).join(", ").slice(0, 200),
       config.merchantId,
       appBaseUrl,
-      'Credit'
+      "Credit",
     );
+    const checkMacValue = generateCheckMacValue(ecpayParams, config.hashKey, config.hashIV);
 
-    // 生成 CheckMacValue
-    const checkMacValue = generateCheckMacValue(
-      ecpayParams,
-      config.hashKey,
-      config.hashIV
-    );
-
-    console.log('[Checkout] 簽章詳情:', {
-      merchantTradeNo,
-      checkMacValue,
-      paramKeys: Object.keys(ecpayParams).sort(),
-    });
-
-    // 將 CheckMacValue 加入參數
-    const fullParams = {
-      ...ecpayParams,
-      CheckMacValue: checkMacValue,
-    };
-
-    // 產生自動提交的 HTML 表單
-    const htmlForm = generateECPayForm(fullParams, config.cashierUrl);
-
-    console.log('[Checkout] HTML 表單已產生:', {
+    return NextResponse.json({
       orderId,
-      merchantTradeNo,
-      merchantId: config.merchantId,
-      totalParams: Object.keys(fullParams).length,
-    });
-
-    // 返回 HTML（自動提交）
-    return new NextResponse(htmlForm, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
+      paymentMethod: "CREDIT",
+      form: {
+        action: config.cashierUrl,
+        fields: {
+          ...ecpayParams,
+          CheckMacValue: checkMacValue,
+        },
       },
     });
   } catch (error) {
-    console.error('[Checkout Error]', error);
-    const detailedError = process.env.NODE_ENV === 'development'
-      ? (error instanceof Error ? error.message : String(error))
-      : undefined;
-
+    console.error("[checkout] error", error);
     return NextResponse.json(
-      {
-        error: '建立訂單失敗',
-        ...(detailedError && { detailedError }),
-      },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : "建立訂單失敗" },
+      { status: 500 },
     );
   }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 export interface UserRoleManagerUser {
@@ -67,8 +68,9 @@ export default function UserRoleManager({
     } finally {
       setTimeout(() => {
         setStatusMap((prev) => {
-          const { [userId]: _, ...rest } = prev;
-          return rest;
+          const next = { ...prev };
+          delete next[userId];
+          return next;
         });
       }, 2000);
     }
@@ -101,11 +103,13 @@ export default function UserRoleManager({
               >
                 <div className="flex items-center gap-3">
                   {user.image ? (
-                    // 圖片為 Next Image 時需加上域名設定，這裡使用原生 img 作為預覽
-                    <img
+                    <Image
                       src={user.image}
                       alt={user.name ?? user.email ?? "User avatar"}
+                      width={40}
+                      height={40}
                       className="h-10 w-10 rounded-full object-cover"
+                      unoptimized
                     />
                   ) : (
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-600">

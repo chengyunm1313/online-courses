@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -42,8 +41,6 @@ interface OrderData {
 export default function OrderResultPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
-
   const orderId = params.id as string;
   const paymentType = searchParams.get('payment');
 

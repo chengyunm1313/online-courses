@@ -14,6 +14,8 @@ interface CheckoutItem {
 }
 
 interface CheckoutFormData {
+  courseIds?: string[];
+  discountCode?: string;
   items: CheckoutItem[];
   paymentMethod: 'CREDIT' | 'ATM';
   shippingMethod: 'HOME' | 'STORE';
@@ -29,7 +31,7 @@ interface CheckoutFormData {
  */
 export default function CheckoutPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'CREDIT' | 'ATM'>('CREDIT');
@@ -111,12 +113,10 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: cartData.items,
+          courseIds: cartData.courseIds ?? cartData.items.map((item) => item.courseId),
           paymentMethod,
           shippingMethod,
-          subtotal: cartData.subtotal,
-          tax: cartData.tax,
-          total: cartData.total,
+          discountCode: cartData.discountCode,
           notes: notes || undefined,
         }),
       });
@@ -127,18 +127,30 @@ export default function CheckoutPage() {
         throw new Error(errorMsg);
       }
 
-      const contentType = response.headers.get('content-type');
+      const data = await response.json();
 
-      if (contentType?.includes('text/html')) {
-        // 信用卡流程：返回 HTML 表單，自動提交
-        const html = await response.text();
-        document.write(html);
-        document.close();
-      } else {
-        // ATM 流程：返回 JSON，重定向
-        const data = await response.json();
+      if (data.form?.action && data.form?.fields) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = data.form.action;
+        form.style.display = 'none';
+
+        Object.entries(data.form.fields as Record<string, string | number>).forEach(([key, value]) => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = String(value);
+          form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        sessionStorage.removeItem('checkoutCart');
+        form.submit();
+      } else if (data.redirectUrl) {
         sessionStorage.removeItem('checkoutCart');
         window.location.href = data.redirectUrl;
+      } else {
+        throw new Error('支付流程回應格式錯誤');
       }
     } catch (err) {
       console.error('Checkout error:', err);
