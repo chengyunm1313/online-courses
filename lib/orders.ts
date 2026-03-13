@@ -28,6 +28,7 @@ export async function createOrder(orderData: Omit<Order, "id">): Promise<string>
     userEmail: orderData.userEmail,
     items: orderData.items,
     subtotal: orderData.subtotal,
+    discountAmount: orderData.discountAmount,
     tax: orderData.tax,
     total: orderData.total,
     status: orderData.status,

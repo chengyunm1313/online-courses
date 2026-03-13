@@ -58,6 +58,7 @@ async function main() {
         },
       ],
       subtotal: course.price,
+      discountAmount: 0,
       tax: 0,
       total: course.price,
       status: seed.status,

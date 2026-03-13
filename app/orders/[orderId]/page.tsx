@@ -134,6 +134,12 @@ export default async function OrderDetailPage({
                 <span>課程金額</span>
                 <span className="font-semibold text-gray-900">NT$ {order.subtotal.toLocaleString()}</span>
               </p>
+              {order.discountAmount > 0 ? (
+                <p className="flex justify-between text-green-700">
+                  <span>折扣</span>
+                  <span className="font-semibold">- NT$ {order.discountAmount.toLocaleString()}</span>
+                </p>
+              ) : null}
               <p className="flex justify-between">
                 <span>稅金</span>
                 <span className="font-semibold text-gray-900">NT$ {order.tax.toLocaleString()}</span>

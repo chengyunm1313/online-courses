@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_method TEXT NOT NULL,
   shipping_method TEXT,
   subtotal INTEGER NOT NULL DEFAULT 0,
+  discount_amount INTEGER NOT NULL DEFAULT 0,
   tax INTEGER NOT NULL DEFAULT 0,
   total INTEGER NOT NULL DEFAULT 0,
   notes TEXT,

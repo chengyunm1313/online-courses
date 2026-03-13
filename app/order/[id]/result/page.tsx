@@ -9,6 +9,9 @@ interface OrderData {
   id: string;
   userId: string;
   status: string;
+  subtotal: number;
+  discountAmount: number;
+  tax: number;
   total: number;
   items: Array<{
     courseId: string;
@@ -112,6 +115,8 @@ export default function OrderResultPage() {
   const isFailed = order.status === 'FAILED';
   const isCreated = order.status === 'CREATED' || paymentType === 'atm';
   const isATM = order.paymentMethod === 'ATM' || paymentType === 'atm';
+  const itemSubtotal = order.subtotal || order.items.reduce((sum, item) => sum + item.price, 0);
+  const discountAmount = order.discountAmount || 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -329,8 +334,20 @@ export default function OrderResultPage() {
           <div className="space-y-2 mb-6">
             <div className="flex justify-between text-gray-700">
               <span>小計：</span>
-              <span>NT${order.items.reduce((sum, item) => sum + item.price, 0).toLocaleString()}</span>
+              <span>NT${itemSubtotal.toLocaleString()}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-green-700">
+                <span>折扣：</span>
+                <span>- NT${discountAmount.toLocaleString()}</span>
+              </div>
+            )}
+            {order.tax > 0 && (
+              <div className="flex justify-between text-gray-700">
+                <span>稅額：</span>
+                <span>NT${order.tax.toLocaleString()}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xl font-bold text-gray-900">
               <span>合計：</span>
               <span>NT${order.total.toLocaleString()}</span>

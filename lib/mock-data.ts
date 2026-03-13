@@ -426,6 +426,7 @@ export const mockOrders: Order[] = [
       }
     ],
     subtotal: 1980,
+    discountAmount: 0,
     tax: 99,
     total: 2079,
     status: "completed",
@@ -458,6 +459,7 @@ export const mockOrders: Order[] = [
       }
     ],
     subtotal: 5680,
+    discountAmount: 0,
     tax: 284,
     total: 5964,
     status: "completed",
@@ -482,6 +484,7 @@ export const mockOrders: Order[] = [
       }
     ],
     subtotal: 2180,
+    discountAmount: 0,
     tax: 109,
     total: 2289,
     status: "pending",
@@ -505,6 +508,7 @@ export const mockOrders: Order[] = [
       }
     ],
     subtotal: 1880,
+    discountAmount: 0,
     tax: 94,
     total: 1974,
     status: "completed",
@@ -536,6 +540,7 @@ export const mockOrders: Order[] = [
       }
     ],
     subtotal: 4160,
+    discountAmount: 0,
     tax: 208,
     total: 4368,
     status: "cancelled",
@@ -559,6 +564,7 @@ export const mockOrders: Order[] = [
       }
     ],
     subtotal: 3200,
+    discountAmount: 0,
     tax: 160,
     total: 3360,
     status: "completed",

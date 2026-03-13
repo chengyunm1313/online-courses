@@ -38,10 +38,15 @@ function getRequiredEnv(name: string): string {
 }
 
 export function isD1Configured(): boolean {
+  const isCloudflareWorkerRuntime =
+    "WebSocketPair" in globalThis ||
+    typeof (globalThis as { EdgeRuntime?: string }).EdgeRuntime === "string";
+
   return Boolean(
-    process.env.CLOUDFLARE_ACCOUNT_ID &&
-      process.env.CLOUDFLARE_D1_DATABASE_ID &&
-      process.env.CLOUDFLARE_API_TOKEN,
+    isCloudflareWorkerRuntime ||
+      (process.env.CLOUDFLARE_ACCOUNT_ID &&
+        process.env.CLOUDFLARE_D1_DATABASE_ID &&
+        process.env.CLOUDFLARE_API_TOKEN),
   );
 }
 

@@ -104,6 +104,7 @@ interface OrderRow {
   payment_method: string;
   shipping_method: string | null;
   subtotal: number;
+  discount_amount: number;
   tax: number;
   total: number;
   notes: string | null;
@@ -418,7 +419,7 @@ async function seedMockCourses(): Promise<void> {
         rating, students_enrolled, tags_json, instructor_id, instructor_name, instructor_avatar,
         instructor_bio, target_audience_json, learning_outcomes_json, faq_json, sales_blocks_json,
         seo_title, seo_description, published, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         course.id,
         course.title,
@@ -621,8 +622,14 @@ export async function ensureAppUser(input: {
     `SELECT * FROM users WHERE id = ? LIMIT 1`,
     [input.id],
   );
+  const existingByEmail = existing
+    ? null
+    : await queryFirstD1<UserRow>(
+        `SELECT * FROM users WHERE email = ? LIMIT 1`,
+        [input.email],
+      );
 
-  if (!existing) {
+  if (!existing && !existingByEmail) {
     await executeD1(
       `INSERT INTO users (id, email, name, image, role, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -636,15 +643,33 @@ export async function ensureAppUser(input: {
         now,
       ],
     );
+  } else if (existingByEmail) {
+    await executeD1(
+      `UPDATE users
+       SET id = ?, email = ?, name = ?, image = ?, updated_at = ?
+       WHERE id = ?`,
+      [
+        input.id,
+        input.email,
+        input.name ?? existingByEmail.name,
+        input.image ?? existingByEmail.image,
+        now,
+        existingByEmail.id,
+      ],
+    );
   } else {
+    const matchedUser = existing;
+    if (!matchedUser) {
+      throw new Error("更新使用者失敗");
+    }
     await executeD1(
       `UPDATE users
        SET email = ?, name = ?, image = ?, updated_at = ?
        WHERE id = ?`,
       [
         input.email,
-        input.name ?? existing.name,
-        input.image ?? existing.image,
+        input.name ?? matchedUser.name,
+        input.image ?? matchedUser.image,
         now,
         input.id,
       ],
@@ -753,6 +778,7 @@ export interface OrderDraft {
   userEmail: string;
   items: OrderDraftItem[];
   subtotal: number;
+  discountAmount: number;
   tax: number;
   total: number;
   status: OrderStatus;
@@ -784,6 +810,7 @@ function mapOrder(
     userEmail: row.user_email,
     items,
     subtotal: Number(row.subtotal ?? 0),
+    discountAmount: Number(row.discount_amount ?? 0),
     tax: Number(row.tax ?? 0),
     total: Number(row.total ?? 0),
     status: row.status as OrderStatus,
@@ -840,10 +867,10 @@ export async function createOrderRecord(input: OrderDraft): Promise<string> {
   await executeD1(
     `INSERT INTO orders (
       id, user_id, user_name, user_email, merchant_trade_no, status, payment_method,
-      shipping_method, subtotal, tax, total, notes, transaction_id, ecpay_data_json,
+      shipping_method, subtotal, discount_amount, tax, total, notes, transaction_id, ecpay_data_json,
       refund_status, refund_reason, refund_note, refund_requested_at, refunded_at, reconciliation_status,
       created_at, updated_at, paid_at, failed_at, canceled_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.userId,
@@ -854,6 +881,7 @@ export async function createOrderRecord(input: OrderDraft): Promise<string> {
       input.paymentMethod,
       input.shippingMethod ?? null,
       input.subtotal,
+      input.discountAmount,
       input.tax,
       input.total,
       input.notes ?? null,

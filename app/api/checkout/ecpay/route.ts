@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const total = discount.finalPrice;
+    const discountAmount = Math.max(subtotal - total, 0);
     const paymentMethod = body.paymentMethod === "ATM" ? "ATM" : "CREDIT";
     const merchantTradeNo = generateMerchantTradeNo();
 
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
         price: course.price,
       })),
       subtotal,
+      discountAmount,
       tax: 0,
       total,
       status: "CREATED",
