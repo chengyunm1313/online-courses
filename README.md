@@ -60,6 +60,7 @@ npm run db:migrate:firestore-to-d1
 
 - 已提供 [wrangler.toml](wrangler.toml) 作為 D1 / Worker 綁定範本
 - `database_id`、`APP_BASE_URL` 與所有 secrets 需依實際環境填入
+- 正式上線前請逐項檢查 [docs/release-checklist-cloudflare.md](docs/release-checklist-cloudflare.md)
 
 ## 主要路由功能
 
