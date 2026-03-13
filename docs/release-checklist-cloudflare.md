@@ -2,6 +2,8 @@
 
 本文件用於這一版「D1 + Gmail API + ECPay + Google OAuth」架構的實際上線前檢查。
 
+若需要可直接複製執行的設定命令，請先看 [docs/cloudflare-setup-commands.md](/Users/hsuhsiang/Desktop/project/vibe-coding/online-courses/docs/cloudflare-setup-commands.md)。
+
 ## 1. 基礎設定
 
 - 確認本機 `npm run lint`
