@@ -94,80 +94,80 @@ export default function AdminOrdersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">訂單管理</h1>
-          <p className="mt-2 text-gray-600">管理所有課程訂單和交易記錄</p>
+          <h1 className="text-3xl font-bold text-slate-950">訂單管理</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-700">管理所有課程訂單和交易記錄</p>
         </div>
 
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
+              <div className="flex-shrink-0 rounded-xl bg-blue-100 p-3">
                 <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">總訂單數</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalOrders}</p>
+                <p className="text-sm font-medium text-slate-600">總訂單數</p>
+                <p className="text-2xl font-semibold text-slate-950">{stats.totalOrders}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-green-100 rounded-md p-3">
+              <div className="flex-shrink-0 rounded-xl bg-green-100 p-3">
                 <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">總營收</p>
-                <p className="text-2xl font-semibold text-gray-900">NT$ {stats.totalRevenue.toLocaleString()}</p>
+                <p className="text-sm font-medium text-slate-600">總營收</p>
+                <p className="text-2xl font-semibold text-slate-950">NT$ {stats.totalRevenue.toLocaleString()}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-yellow-100 rounded-md p-3">
+              <div className="flex-shrink-0 rounded-xl bg-yellow-100 p-3">
                 <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">待處理</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.pendingOrders}</p>
+                <p className="text-sm font-medium text-slate-600">待處理</p>
+                <p className="text-2xl font-semibold text-slate-950">{stats.pendingOrders}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center">
-              <div className="flex-shrink-0 bg-purple-100 rounded-md p-3">
+              <div className="flex-shrink-0 rounded-xl bg-violet-100 p-3">
                 <svg className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">已完成</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.completedOrders}</p>
+                <p className="text-sm font-medium text-slate-600">已完成</p>
+                <p className="text-2xl font-semibold text-slate-950">{stats.completedOrders}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="search" className="mb-2 block text-sm font-semibold text-slate-900">
                 搜尋訂單
               </label>
               <input
@@ -176,18 +176,18 @@ export default function AdminOrdersPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="訂單編號、客戶名稱或電子郵件..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
               />
             </div>
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="status" className="mb-2 block text-sm font-semibold text-slate-900">
                 訂單狀態
               </label>
               <select
                 id="status"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as OrderStatus | "all")}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-100"
               >
                 <option value="all">全部狀態</option>
                 <option value="PAID">已付款</option>
@@ -203,35 +203,35 @@ export default function AdminOrdersPage() {
         </div>
 
         {/* Orders Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     訂單資訊
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     客戶
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     課程
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     金額
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     狀態
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">
                     操作
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-slate-200 bg-white">
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-600">
                       沒有找到符合條件的訂單
                     </td>
                   </tr>
@@ -239,23 +239,23 @@ export default function AdminOrdersPage() {
                   filteredOrders.map((order) => {
                     const normalizedOrder = normalizeOrder(order);
                     return (
-                    <tr key={order.id} className="hover:bg-gray-50">
+                    <tr key={order.id} className="transition hover:bg-slate-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm">
-                          <div className="font-medium text-gray-900">{normalizedOrder.id}</div>
-                          <div className="text-gray-500">
+                          <div className="font-medium text-slate-950">{normalizedOrder.id}</div>
+                          <div className="text-slate-600">
                             {normalizedOrder.createdAt.toLocaleDateString("zh-TW")}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm">
-                          <div className="font-medium text-gray-900">{order.userName}</div>
-                          <div className="text-gray-500">{order.userEmail}</div>
+                          <div className="font-medium text-slate-950">{order.userName}</div>
+                          <div className="text-slate-600">{order.userEmail}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-slate-950">
                           {order.items.length === 1 ? (
                             <div className="flex items-center space-x-2">
                               <Image
@@ -273,7 +273,7 @@ export default function AdminOrdersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-semibold text-slate-950">
                           NT$ {order.total.toLocaleString()}
                         </div>
                       </td>
@@ -284,14 +284,14 @@ export default function AdminOrdersPage() {
                         <div className="flex justify-end space-x-2">
                           <Link
                             href={`/admin/orders/${order.id}`}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="text-blue-600 transition hover:text-blue-800"
                           >
                             查看
                           </Link>
                           {order.status === "pending" && (
                             <button
                               onClick={() => handleStatusChange(order.id, "completed")}
-                              className="text-green-600 hover:text-green-900"
+                              className="text-green-600 transition hover:text-green-800"
                             >
                               完成
                             </button>

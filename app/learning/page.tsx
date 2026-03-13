@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
 import { authOptions } from "@/lib/auth";
 import { getLearningCoursesForUser } from "@/lib/learning";
 import LessonProgressToggle from "@/components/learning/LessonProgressToggle";
@@ -278,6 +279,8 @@ export default async function LearningPage() {
           </div>
         )}
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

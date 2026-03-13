@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
 import { authOptions } from "@/lib/auth";
 import { getOrderById } from "@/lib/orders";
 import type { OrderItem } from "@/types/order";
@@ -211,6 +212,8 @@ export default async function OrderDetailPage({
           {order.completedAt ? <span>已完成時間：{formatDate(order.completedAt)}</span> : null}
         </div>
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

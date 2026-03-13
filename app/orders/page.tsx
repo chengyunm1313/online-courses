@@ -5,6 +5,7 @@ import { getUserOrders } from "@/lib/orders";
 import Link from "next/link";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
 import type { Order } from "@/types/order";
 
 export default async function OrdersPage() {
@@ -206,6 +207,7 @@ export default async function OrdersPage() {
         )}
         </div>
       </div>
+      <SiteFooter />
     </div>
   );
 }

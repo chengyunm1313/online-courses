@@ -1,4 +1,5 @@
 import Navbar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
 import CourseCatalog from "@/components/courses/CourseCatalog";
 import { getPublishedCourses, type PublicCourse } from "@/lib/public-courses";
 
@@ -25,6 +26,7 @@ export default async function CoursesPage() {
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <CourseCatalog courses={serializedCourses} />
       </div>
+      <SiteFooter />
     </div>
   );
 }

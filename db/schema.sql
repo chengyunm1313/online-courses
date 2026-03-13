@@ -168,6 +168,20 @@ CREATE TABLE IF NOT EXISTS analytics_events (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  category TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  message TEXT NOT NULL,
+  order_id TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  user_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_courses_published ON courses (published, updated_at);
 CREATE INDEX IF NOT EXISTS idx_courses_status ON courses (status, updated_at);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id, created_at);
@@ -178,3 +192,4 @@ CREATE INDEX IF NOT EXISTS idx_discounts_code ON discounts (code, enabled);
 CREATE INDEX IF NOT EXISTS idx_lesson_progress_user_course ON lesson_progress (user_id, course_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_name_created ON analytics_events (event_name, created_at);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_course_created ON analytics_events (course_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status_created ON support_tickets (status, created_at);

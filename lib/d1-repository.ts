@@ -16,6 +16,7 @@ import type {
   ReconciliationStatus,
   RefundStatus,
 } from "@/types/order";
+import type { SupportTicket, SupportTicketCategory, SupportTicketStatus } from "@/types/support";
 import { D1ConfigError, executeD1, isD1Configured, queryD1, queryFirstD1 } from "@/lib/d1";
 
 export type AppRole = "student" | "instructor" | "admin";
@@ -171,6 +172,20 @@ interface LessonProgressRow {
   updated_at: string;
 }
 
+interface SupportTicketRow {
+  id: string;
+  name: string;
+  email: string;
+  category: SupportTicketCategory;
+  subject: string;
+  message: string;
+  order_id: string | null;
+  status: SupportTicketStatus;
+  user_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DiscountRecord {
   id: string;
   code: string;
@@ -205,6 +220,22 @@ export interface CheckoutFunnelMetrics {
   checkoutStarted: number;
   ordersCreated: number;
   paymentsSucceeded: number;
+}
+
+function mapSupportTicket(row: SupportTicketRow): SupportTicket {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    category: row.category,
+    subject: row.subject,
+    message: row.message,
+    orderId: row.order_id ?? undefined,
+    status: row.status,
+    userId: row.user_id ?? undefined,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  };
 }
 
 const PLACEHOLDER_THUMBNAIL =
@@ -1474,6 +1505,45 @@ export async function getCheckoutFunnelMetrics(days = 30): Promise<CheckoutFunne
     ordersCreated: counts.get("order_created") ?? 0,
     paymentsSucceeded: counts.get("payment_succeeded") ?? 0,
   };
+}
+
+export async function createSupportTicket(input: {
+  name: string;
+  email: string;
+  category: SupportTicketCategory;
+  subject: string;
+  message: string;
+  orderId?: string;
+  userId?: string;
+}): Promise<string> {
+  const id = crypto.randomUUID();
+  const now = nowIso();
+  await executeD1(
+    `INSERT INTO support_tickets (
+      id, name, email, category, subject, message, order_id, status, user_id, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.name,
+      input.email,
+      input.category,
+      input.subject,
+      input.message,
+      input.orderId ?? null,
+      "open",
+      input.userId ?? null,
+      now,
+      now,
+    ],
+  );
+  return id;
+}
+
+export async function listSupportTickets(): Promise<SupportTicket[]> {
+  const rows = await queryD1<SupportTicketRow>(
+    `SELECT * FROM support_tickets ORDER BY created_at DESC LIMIT 200`,
+  );
+  return rows.map(mapSupportTicket);
 }
 
 export async function updateCourseRecord(input: {

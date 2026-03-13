@@ -46,6 +46,17 @@ export default function Navbar() {
                 課程列表
               </Link>
 
+              <Link
+                href="/contact"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive("/contact")
+                    ? "border-blue-500 text-gray-900"
+                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                }`}
+              >
+                客服聯絡
+              </Link>
+
               {session && (
                 <>
                   <Link
@@ -91,6 +102,16 @@ export default function Navbar() {
                         }`}
                       >
                         折扣碼
+                      </Link>
+                      <Link
+                        href="/admin/support"
+                        className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                          pathname?.startsWith("/admin/support")
+                            ? "border-blue-500 text-gray-900"
+                            : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        }`}
+                      >
+                        客服單
                       </Link>
                     </>
                   )}

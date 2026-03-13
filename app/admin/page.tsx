@@ -59,13 +59,13 @@ export default async function AdminDashboard() {
   const displayedInstructors: AdminInstructorSummary[] = instructorSummaries;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
         <header className="space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">後台管理儀表板</h1>
-          <p className="text-sm text-gray-600">
+          <h1 className="text-3xl font-bold text-slate-950">後台管理儀表板</h1>
+          <p className="text-sm leading-6 text-slate-700">
             透過真實資料掌握平台運營狀況，管理課程、講師與帳號權限。
           </p>
         </header>
@@ -73,10 +73,10 @@ export default async function AdminDashboard() {
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Link
             href="/admin/courses"
-            className="group rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow"
+            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
           >
-            <h2 className="text-sm font-semibold text-gray-900">課程 CRUD 管理</h2>
-            <p className="mt-2 text-xs text-gray-600">
+            <h2 className="text-sm font-semibold text-slate-950">課程 CRUD 管理</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
               建立、編輯或下架課程內容，指派講師並維護詳情。
             </p>
             <span className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600">
@@ -86,10 +86,10 @@ export default async function AdminDashboard() {
 
           <Link
             href="/admin/orders"
-            className="group rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow"
+            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
           >
-            <h2 className="text-sm font-semibold text-gray-900">訂單管理</h2>
-            <p className="mt-2 text-xs text-gray-600">
+            <h2 className="text-sm font-semibold text-slate-950">訂單管理</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
               管理課程訂單、追蹤交易狀態與處理付款事宜。
             </p>
             <span className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600">
@@ -99,10 +99,10 @@ export default async function AdminDashboard() {
 
           <Link
             href="/admin/reports"
-            className="group rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow"
+            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
           >
-            <h2 className="text-sm font-semibold text-gray-900">營運報表</h2>
-            <p className="mt-2 text-xs text-gray-600">
+            <h2 className="text-sm font-semibold text-slate-950">營運報表</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
               追蹤營收走勢與課程表現，洞察平台成長節奏。
             </p>
             <span className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600">
@@ -112,14 +112,27 @@ export default async function AdminDashboard() {
 
           <Link
             href="/admin/discounts"
-            className="group rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow"
+            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
           >
-            <h2 className="text-sm font-semibold text-gray-900">折扣與活動</h2>
-            <p className="mt-2 text-xs text-gray-600">
+            <h2 className="text-sm font-semibold text-slate-950">折扣與活動</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
               管理促銷折扣碼、活動期間與使用上限，支援真實營運。
             </p>
             <span className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600">
               前往折扣管理 →
+            </span>
+          </Link>
+
+          <Link
+            href="/admin/support"
+            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+          >
+            <h2 className="text-sm font-semibold text-slate-950">客服單管理</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              集中處理退款、付款異常與課程問題，讓客服需求可追蹤。
+            </p>
+            <span className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600">
+              前往客服單 →
             </span>
           </Link>
         </section>
@@ -206,11 +219,11 @@ export default async function AdminDashboard() {
         </section>
 
         <section className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b px-6 py-4">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">課程表現概況</h2>
-                <p className="text-sm text-gray-600">
+                <h2 className="text-xl font-semibold text-slate-950">課程表現概況</h2>
+                <p className="text-sm leading-6 text-slate-700">
                   依實際報名數排序，觀察熱門課程趨勢。
                 </p>
               </div>
@@ -224,7 +237,7 @@ export default async function AdminDashboard() {
 
             <div className="divide-y">
               {displayedCourses.length === 0 ? (
-                <p className="px-6 py-8 text-sm text-gray-600">
+                <p className="px-6 py-8 text-sm text-slate-700">
                   尚未有任何課程資料，請先建立課程。
                 </p>
               ) : (
@@ -234,21 +247,21 @@ export default async function AdminDashboard() {
                     className="flex flex-col gap-3 px-6 py-4 md:flex-row md:items-center md:justify-between"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-gray-900">
+                      <p className="truncate text-sm font-semibold text-slate-950">
                         {course.title}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-600">
                         {course.instructorName} • 更新於 {formatDate(course.updatedAt)}
                       </p>
                     </div>
-                    <div className="flex flex-col items-start gap-2 text-sm text-gray-600 md:flex-row md:items-center md:gap-4">
+                    <div className="flex flex-col items-start gap-2 text-sm text-slate-700 md:flex-row md:items-center md:gap-4">
                       <span>{formatNumber(course.enrollmentCount)} 位學生</span>
                       <span>{formatCurrency(course.price)}</span>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                           course.published
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-200 text-gray-600"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-slate-200 text-slate-700"
                         }`}
                       >
                         {course.published ? "已上架" : "草稿"}
@@ -260,17 +273,17 @@ export default async function AdminDashboard() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b px-6 py-4">
-              <h2 className="text-xl font-semibold text-gray-900">講師上傳課程</h2>
-              <p className="text-sm text-gray-600">
+              <h2 className="text-xl font-semibold text-slate-950">講師上傳課程</h2>
+              <p className="text-sm leading-6 text-slate-700">
                 查看講師貢獻度與課程數量，協助安排內容策略。
               </p>
             </div>
 
             <div className="divide-y">
               {displayedInstructors.length === 0 ? (
-                <p className="px-6 py-8 text-sm text-gray-600">
+                <p className="px-6 py-8 text-sm text-slate-700">
                   目前還沒有講師上傳課程。
                 </p>
               ) : (
@@ -280,10 +293,10 @@ export default async function AdminDashboard() {
                     className="flex flex-col gap-2 px-6 py-4 md:flex-row md:items-center md:justify-between"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-semibold text-slate-950">
                         {instructor.name}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-600">
                         {instructor.email ?? "未提供信箱"} • 角色：{instructor.role}
                       </p>
                     </div>
@@ -321,14 +334,14 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon, helper }: StatCardProps) {
   return (
-    <div className="rounded-lg bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-600">{label}</p>
-          <p className="mt-1 text-3xl font-bold text-gray-900">{value}</p>
-          {helper ? <p className="mt-1 text-xs text-gray-500">{helper}</p> : null}
+          <p className="text-sm text-slate-700">{label}</p>
+          <p className="mt-1 text-3xl font-bold text-slate-950">{value}</p>
+          {helper ? <p className="mt-1 text-xs text-slate-600">{helper}</p> : null}
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 ring-1 ring-blue-100">
           {icon}
         </div>
       </div>
