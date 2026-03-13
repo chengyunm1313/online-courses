@@ -8,6 +8,10 @@ import {
   updateOrderRecord,
   type OrderDraft,
 } from "@/lib/d1-repository";
+import {
+  sendRefundCompletedEmail,
+  sendRefundRequestedEmail,
+} from "@/lib/notifications";
 
 export async function getUserOrders(userId: string): Promise<Order[]> {
   return listOrdersFromStore(userId);
@@ -73,6 +77,7 @@ export async function updateOrderOperations(input: {
   reconciliationStatus?: ReconciliationStatus;
   notes?: string;
 }) {
+  const previousOrder = await getOrderByIdFromStore(input.orderId);
   await updateOrderRecord(input.orderId, {
     refundStatus: input.refundStatus,
     refundReason: input.refundReason,
@@ -82,6 +87,35 @@ export async function updateOrderOperations(input: {
     reconciliationStatus: input.reconciliationStatus,
     notes: input.notes,
   });
+
+  const updatedOrder = await getOrderByIdFromStore(input.orderId);
+  if (!previousOrder || !updatedOrder || !updatedOrder.userEmail) {
+    return;
+  }
+
+  const refundStatusChanged = previousOrder.refundStatus !== updatedOrder.refundStatus;
+  if (!refundStatusChanged) {
+    return;
+  }
+
+  const courseTitles = updatedOrder.items.map((item) => item.courseTitle);
+  if (updatedOrder.refundStatus === "requested") {
+    await sendRefundRequestedEmail({
+      orderId: updatedOrder.id,
+      to: updatedOrder.userEmail,
+      courseTitles,
+      refundReason: updatedOrder.refundReason,
+    });
+  }
+
+  if (updatedOrder.refundStatus === "refunded") {
+    await sendRefundCompletedEmail({
+      orderId: updatedOrder.id,
+      to: updatedOrder.userEmail,
+      courseTitles,
+      refundReason: updatedOrder.refundReason,
+    });
+  }
 }
 
 export async function recordOrderEvent(input: {
