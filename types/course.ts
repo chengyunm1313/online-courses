@@ -5,8 +5,11 @@
 export interface Course {
   id: string;
   title: string;
+  subtitle?: string;
+  slug?: string;
   description: string;
   thumbnail: string;
+  ogImage?: string;
   instructor: {
     id: string;
     name: string;
@@ -23,9 +26,26 @@ export interface Course {
   syllabus: CourseSyllabus[];
   modules: CourseModule[];
   tags: string[];
+  status: 'draft' | 'published' | 'archived';
+  targetAudience: string[];
+  learningOutcomes: string[];
+  faq: CourseFaqItem[];
+  salesBlocks: CourseSalesBlock[];
+  seoTitle?: string;
+  seoDescription?: string;
   createdAt: Date;
   updatedAt: Date;
   published: boolean;
+}
+
+export interface CourseFaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface CourseSalesBlock {
+  title: string;
+  content: string;
 }
 
 export interface CourseSyllabus {
@@ -73,6 +93,14 @@ export interface Enrollment {
   completedLessons: string[];
   lastAccessedAt: Date;
   status: 'active' | 'completed' | 'cancelled';
+}
+
+export interface LessonProgress {
+  lessonId: string;
+  courseId: string;
+  userId: string;
+  completedAt?: Date;
+  lastPosition: number;
 }
 
 export interface Review {

@@ -1,14 +1,19 @@
 import type { CourseModule } from "@/types/course";
 import {
+  createDiscountRecord,
   createCourseRecord,
   deleteCourseRecord,
+  type DiscountRecord,
   getCourseByIdFromStore,
+  getDiscountByCodeFromStore,
   getAppUserById,
+  listDiscountsFromStore,
   listAllCoursesFromStore,
   listAppUsers,
   listInstructorUsers,
   listOrderEvents,
   listOrdersFromStore,
+  updateDiscountRecord,
   updateCourseRecord,
 } from "@/lib/d1-repository";
 
@@ -24,10 +29,13 @@ export interface AdminDashboardStats {
 export interface AdminCourseSummary {
   id: string;
   title: string;
+  subtitle?: string;
+  slug?: string;
   price: number;
   enrollmentCount: number;
   instructorName: string;
   published: boolean;
+  status: "draft" | "published" | "archived";
   updatedAt?: string;
   category?: string;
   level?: string;
@@ -36,11 +44,18 @@ export interface AdminCourseSummary {
 export interface AdminCourseDetail extends AdminCourseSummary {
   description: string;
   thumbnail?: string;
+  ogImage?: string;
   duration?: number;
   lessons?: number;
   tags: string[];
   instructorId: string;
   modules: AdminCourseModule[];
+  targetAudience: string[];
+  learningOutcomes: string[];
+  faq: { question: string; answer: string }[];
+  salesBlocks: { title: string; content: string }[];
+  seoTitle?: string;
+  seoDescription?: string;
 }
 
 export interface AdminCourseLesson {
@@ -87,8 +102,12 @@ export interface AdminDashboardData {
 
 export interface AdminCourseInput {
   title: string;
+  subtitle?: string;
+  slug?: string;
+  status?: "draft" | "published" | "archived";
   description?: string;
   thumbnail?: string;
+  ogImage?: string;
   price?: number;
   category?: string;
   level?: "beginner" | "intermediate" | "advanced";
@@ -97,8 +116,28 @@ export interface AdminCourseInput {
   tags?: string[];
   published?: boolean;
   instructorId?: string;
+  targetAudience?: string[];
+  learningOutcomes?: string[];
+  faq?: { question: string; answer: string }[];
+  salesBlocks?: { title: string; content: string }[];
+  seoTitle?: string;
+  seoDescription?: string;
   modules?: AdminCourseModule[];
   syllabus?: AdminCourseLesson[];
+}
+
+export interface AdminDiscountInput {
+  code: string;
+  type: "percentage" | "amount";
+  value: number;
+  description?: string;
+  startsAt?: string;
+  endsAt?: string;
+  usageLimit?: number;
+  perUserLimit?: number;
+  minimumAmount?: number;
+  courseIds?: string[];
+  enabled?: boolean;
 }
 
 export interface RevenueByMonth {
@@ -150,11 +189,32 @@ export function normalizeAdminCourseInput(body: Record<string, unknown>): AdminC
   const syllabus = Array.isArray(body.syllabus)
     ? (body.syllabus as AdminCourseLesson[])
     : [];
+  const targetAudience = Array.isArray(body.targetAudience)
+    ? body.targetAudience
+    : typeof body.targetAudience === "string"
+      ? body.targetAudience.split("\n")
+      : [];
+  const learningOutcomes = Array.isArray(body.learningOutcomes)
+    ? body.learningOutcomes
+    : typeof body.learningOutcomes === "string"
+      ? body.learningOutcomes.split("\n")
+      : [];
+  const faq = Array.isArray(body.faq) ? body.faq : [];
+  const salesBlocks = Array.isArray(body.salesBlocks) ? body.salesBlocks : [];
 
   return {
     title: String(body.title ?? "").trim(),
+    subtitle: typeof body.subtitle === "string" ? body.subtitle.trim() : "",
+    slug: typeof body.slug === "string" ? body.slug.trim() : "",
+    status:
+      body.status === "draft" || body.status === "published" || body.status === "archived"
+        ? body.status
+        : Boolean(body.published)
+          ? "published"
+          : "draft",
     description: typeof body.description === "string" ? body.description.trim() : "",
     thumbnail: typeof body.thumbnail === "string" ? body.thumbnail.trim() : "",
+    ogImage: typeof body.ogImage === "string" ? body.ogImage.trim() : "",
     price: Number(body.price ?? 0) || 0,
     category: typeof body.category === "string" ? body.category.trim() : "",
     level:
@@ -166,8 +226,46 @@ export function normalizeAdminCourseInput(body: Record<string, unknown>): AdminC
     tags: tags.map((tag) => String(tag).trim()).filter(Boolean),
     published: Boolean(body.published),
     instructorId: typeof body.instructorId === "string" ? body.instructorId : undefined,
+    targetAudience: targetAudience.map((item) => String(item).trim()).filter(Boolean),
+    learningOutcomes: learningOutcomes.map((item) => String(item).trim()).filter(Boolean),
+    faq: faq
+      .map((item) => ({
+        question: typeof item === "object" && item && "question" in item ? String(item.question).trim() : "",
+        answer: typeof item === "object" && item && "answer" in item ? String(item.answer).trim() : "",
+      }))
+      .filter((item) => item.question && item.answer),
+    salesBlocks: salesBlocks
+      .map((item) => ({
+        title: typeof item === "object" && item && "title" in item ? String(item.title).trim() : "",
+        content: typeof item === "object" && item && "content" in item ? String(item.content).trim() : "",
+      }))
+      .filter((item) => item.title && item.content),
+    seoTitle: typeof body.seoTitle === "string" ? body.seoTitle.trim() : "",
+    seoDescription: typeof body.seoDescription === "string" ? body.seoDescription.trim() : "",
     modules,
     syllabus,
+  };
+}
+
+export function normalizeAdminDiscountInput(body: Record<string, unknown>): AdminDiscountInput {
+  const courseIds = Array.isArray(body.courseIds)
+    ? body.courseIds
+    : typeof body.courseIds === "string"
+      ? body.courseIds.split(",")
+      : [];
+
+  return {
+    code: String(body.code ?? "").trim().toUpperCase(),
+    type: body.type === "percentage" ? "percentage" : "amount",
+    value: Number(body.value ?? 0) || 0,
+    description: typeof body.description === "string" ? body.description.trim() : "",
+    startsAt: typeof body.startsAt === "string" ? body.startsAt : "",
+    endsAt: typeof body.endsAt === "string" ? body.endsAt : "",
+    usageLimit: Number(body.usageLimit ?? 0) || undefined,
+    perUserLimit: Number(body.perUserLimit ?? 0) || undefined,
+    minimumAmount: Number(body.minimumAmount ?? 0) || 0,
+    courseIds: courseIds.map((item) => String(item).trim()).filter(Boolean),
+    enabled: body.enabled !== false,
   };
 }
 
@@ -243,10 +341,13 @@ function mapCourseSummary(course: NonNullable<Awaited<ReturnType<typeof getCours
   return {
     id: course.id,
     title: course.title,
+    subtitle: course.subtitle,
+    slug: course.slug,
     price: course.price,
     enrollmentCount,
     instructorName: course.instructor.name,
     published: course.published,
+    status: course.status,
     updatedAt: course.updatedAt.toISOString(),
     category: course.category,
     level: course.level,
@@ -261,6 +362,7 @@ function mapCourseDetail(
     ...mapCourseSummary(course, enrollmentCount),
     description: course.description,
     thumbnail: course.thumbnail,
+    ogImage: course.ogImage,
     duration: course.duration,
     lessons: course.lessons,
     tags: course.tags,
@@ -269,6 +371,12 @@ function mapCourseDetail(
       ...module,
       lessons: module.lessons.map((lesson) => ({ ...lesson })),
     })),
+    targetAudience: course.targetAudience,
+    learningOutcomes: course.learningOutcomes,
+    faq: course.faq,
+    salesBlocks: course.salesBlocks,
+    seoTitle: course.seoTitle,
+    seoDescription: course.seoDescription,
   };
 }
 
@@ -376,8 +484,12 @@ export async function createCourseForManagement(
 
   const courseId = await createCourseRecord({
     title: input.title.trim(),
+    subtitle: input.subtitle?.trim() || undefined,
+    slug: input.slug?.trim() || undefined,
+    status: input.status ?? (input.published ? "published" : "draft"),
     description: input.description?.trim() ?? "",
     thumbnail: input.thumbnail?.trim() || undefined,
+    ogImage: input.ogImage?.trim() || undefined,
     price: Number(input.price ?? 0),
     category: input.category?.trim() || undefined,
     level: input.level ?? "beginner",
@@ -389,6 +501,12 @@ export async function createCourseForManagement(
     instructorName: instructorUser.name,
     instructorAvatar: instructorUser.image,
     instructorBio: "",
+    targetAudience: input.targetAudience ?? [],
+    learningOutcomes: input.learningOutcomes ?? [],
+    faq: input.faq ?? [],
+    salesBlocks: input.salesBlocks ?? [],
+    seoTitle: input.seoTitle?.trim() || undefined,
+    seoDescription: input.seoDescription?.trim() || undefined,
     modules,
   });
 
@@ -428,8 +546,12 @@ export async function updateCourseForManagement(
   await updateCourseRecord({
     id: courseId,
     title: input.title.trim(),
+    subtitle: input.subtitle?.trim() || undefined,
+    slug: input.slug?.trim() || existing.slug,
+    status: input.status ?? (input.published ? "published" : existing.status),
     description: input.description?.trim() ?? "",
     thumbnail: input.thumbnail?.trim() || undefined,
+    ogImage: input.ogImage?.trim() || undefined,
     price: Number(input.price ?? 0),
     category: input.category?.trim() || undefined,
     level: input.level ?? "beginner",
@@ -441,6 +563,12 @@ export async function updateCourseForManagement(
     instructorName: instructorUser.name,
     instructorAvatar: instructorUser.image,
     instructorBio: "",
+    targetAudience: input.targetAudience ?? existing.targetAudience,
+    learningOutcomes: input.learningOutcomes ?? existing.learningOutcomes,
+    faq: input.faq ?? existing.faq,
+    salesBlocks: input.salesBlocks ?? existing.salesBlocks,
+    seoTitle: input.seoTitle?.trim() || existing.seoTitle,
+    seoDescription: input.seoDescription?.trim() || existing.seoDescription,
     modules,
   });
 
@@ -565,4 +693,52 @@ export async function getAdminActivityFeed(limit = 25): Promise<ActivityItem[]> 
   return [...items, ...userActivities]
     .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
     .slice(0, limit);
+}
+
+export async function listDiscountsForManagement(): Promise<DiscountRecord[]> {
+  return listDiscountsFromStore();
+}
+
+export async function createDiscountForManagement(input: AdminDiscountInput) {
+  if (!input.code) {
+    throw new Error("折扣碼為必填");
+  }
+  if (input.value <= 0) {
+    throw new Error("折扣值必須大於 0");
+  }
+  if (await getDiscountByCodeFromStore(input.code)) {
+    throw new Error("折扣碼已存在");
+  }
+
+  const id = await createDiscountRecord({
+    code: input.code,
+    type: input.type,
+    value: input.value,
+    description: input.description,
+    startsAt: input.startsAt || undefined,
+    endsAt: input.endsAt || undefined,
+    usageLimit: input.usageLimit,
+    perUserLimit: input.perUserLimit,
+    minimumAmount: input.minimumAmount ?? 0,
+    courseIds: input.courseIds ?? [],
+    enabled: input.enabled ?? true,
+  });
+
+  return { id };
+}
+
+export async function updateDiscountForManagement(id: string, input: AdminDiscountInput) {
+  await updateDiscountRecord(id, {
+    code: input.code,
+    type: input.type,
+    value: input.value,
+    description: input.description,
+    startsAt: input.startsAt || undefined,
+    endsAt: input.endsAt || undefined,
+    usageLimit: input.usageLimit,
+    perUserLimit: input.perUserLimit,
+    minimumAmount: input.minimumAmount ?? 0,
+    courseIds: input.courseIds ?? [],
+    enabled: input.enabled ?? true,
+  });
 }

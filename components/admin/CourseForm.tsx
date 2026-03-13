@@ -11,16 +11,32 @@ export interface CourseFormInstructorOption {
 
 export interface CourseFormInitialValues {
   title?: string;
+  subtitle?: string;
+  slug?: string;
   description?: string;
   thumbnail?: string;
+  ogImage?: string;
   price?: number;
   category?: string;
   level?: "beginner" | "intermediate" | "advanced";
+  status?: "draft" | "published" | "archived";
   duration?: number;
   lessons?: number;
   tags?: string[];
   published?: boolean;
   instructorId?: string;
+  targetAudience?: string[];
+  learningOutcomes?: string[];
+  faq?: {
+    question: string;
+    answer: string;
+  }[];
+  salesBlocks?: {
+    title: string;
+    content: string;
+  }[];
+  seoTitle?: string;
+  seoDescription?: string;
   syllabus?: {
     id: string;
     title: string;
@@ -102,6 +118,12 @@ const LEVEL_OPTIONS = [
   { value: "advanced", label: "高級" },
 ];
 
+const STATUS_OPTIONS = [
+  { value: "draft", label: "草稿" },
+  { value: "published", label: "已上架" },
+  { value: "archived", label: "已封存" },
+];
+
 const createLessonForm = (lesson?: Partial<LessonForm>): LessonForm => ({
   id: lesson?.id || `lesson-${generateId()}`,
   title: lesson?.title ?? "",
@@ -179,33 +201,57 @@ export default function CourseForm({
 
     return {
       title: initialValues?.title ?? "",
+      subtitle: initialValues?.subtitle ?? "",
+      slug: initialValues?.slug ?? "",
       description: initialValues?.description ?? "",
       thumbnail: initialValues?.thumbnail ?? "",
+      ogImage: initialValues?.ogImage ?? "",
       price: initialValues?.price ?? 0,
       category: initialValues?.category ?? "",
       level: initialValues?.level ?? "beginner",
+      status: initialValues?.status ?? (initialValues?.published ? "published" : "draft"),
       duration: initialValues?.duration ?? 0,
       lessons: initialValues?.lessons ?? 0,
       tags: initialValues?.tags?.join(", ") ?? "",
       published: Boolean(initialValues?.published),
       instructorId: initialValues?.instructorId ?? instructors[0]?.id ?? "",
+      targetAudience: initialValues?.targetAudience?.join("\n") ?? "",
+      learningOutcomes: initialValues?.learningOutcomes?.join("\n") ?? "",
+      faq:
+        initialValues?.faq?.map((item) => `${item.question} | ${item.answer}`).join("\n") ?? "",
+      salesBlocks:
+        initialValues?.salesBlocks?.map((item) => `${item.title} | ${item.content}`).join("\n") ??
+        "",
+      seoTitle: initialValues?.seoTitle ?? "",
+      seoDescription: initialValues?.seoDescription ?? "",
       modules: baseModules ?? syllabusFallback,
     };
   }, [initialValues, instructors]);
 
   const [title, setTitle] = useState(defaultValues.title);
+  const [subtitle, setSubtitle] = useState(defaultValues.subtitle);
+  const [slug, setSlug] = useState(defaultValues.slug);
   const [description, setDescription] = useState(defaultValues.description);
   const [thumbnail, setThumbnail] = useState(defaultValues.thumbnail);
+  const [ogImage, setOgImage] = useState(defaultValues.ogImage);
   const [price, setPrice] = useState(String(defaultValues.price || ""));
   const [category, setCategory] = useState(defaultValues.category);
   const [level, setLevel] = useState<"beginner" | "intermediate" | "advanced">(
     defaultValues.level as "beginner" | "intermediate" | "advanced"
   );
+  const [status, setStatus] = useState<"draft" | "published" | "archived">(
+    defaultValues.status as "draft" | "published" | "archived"
+  );
   const [duration, setDuration] = useState(String(defaultValues.duration || ""));
   const [lessons, setLessons] = useState(String(defaultValues.lessons || ""));
   const [tags, setTags] = useState(defaultValues.tags);
-  const [published, setPublished] = useState(defaultValues.published);
   const [instructorId, setInstructorId] = useState(defaultValues.instructorId);
+  const [targetAudience, setTargetAudience] = useState(defaultValues.targetAudience);
+  const [learningOutcomes, setLearningOutcomes] = useState(defaultValues.learningOutcomes);
+  const [faq, setFaq] = useState(defaultValues.faq);
+  const [salesBlocks, setSalesBlocks] = useState(defaultValues.salesBlocks);
+  const [seoTitle, setSeoTitle] = useState(defaultValues.seoTitle);
+  const [seoDescription, setSeoDescription] = useState(defaultValues.seoDescription);
   const [modules, setModules] = useState<ModuleForm[]>(defaultValues.modules);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -339,6 +385,30 @@ export default function CourseForm({
     }
 
     const flattenedSyllabus = sanitizedModules.flatMap((module) => module.lessons);
+    const normalizedFaq = faq
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [question, ...answerParts] = line.split("|");
+        return {
+          question: question?.trim() ?? "",
+          answer: answerParts.join("|").trim(),
+        };
+      })
+      .filter((item) => item.question && item.answer);
+    const normalizedSalesBlocks = salesBlocks
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [blockTitle, ...contentParts] = line.split("|");
+        return {
+          title: blockTitle?.trim() ?? "",
+          content: contentParts.join("|").trim(),
+        };
+      })
+      .filter((item) => item.title && item.content);
 
     const totalLessons = flattenedSyllabus.length;
     const totalMinutes = flattenedSyllabus.reduce(
@@ -348,19 +418,35 @@ export default function CourseForm({
 
     const payload: Record<string, unknown> = {
       title,
+      subtitle: subtitle.trim() || undefined,
+      slug: slug.trim() || undefined,
       description,
       thumbnail,
+      ogImage: ogImage.trim() || undefined,
       price: Number(price) || 0,
       category,
       level,
+      status,
       duration: Number(duration) || Number((totalMinutes / 60).toFixed(1)) || 0,
       lessons: Number(lessons) || totalLessons,
       tags: tags
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean),
-      published,
+      published: status === "published",
       instructorId: canEditInstructor ? instructorId : undefined,
+      targetAudience: targetAudience
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      learningOutcomes: learningOutcomes
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      faq: normalizedFaq,
+      salesBlocks: normalizedSalesBlocks,
+      seoTitle: seoTitle.trim() || undefined,
+      seoDescription: seoDescription.trim() || undefined,
       modules: sanitizedModules,
       syllabus: flattenedSyllabus.map((lesson, index) => ({
         id: lesson.id,
@@ -420,6 +506,28 @@ export default function CourseForm({
         </div>
 
         <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">副標題</label>
+          <input
+            type="text"
+            value={subtitle}
+            onChange={(event) => setSubtitle(event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="例如：把教學內容變成真正能成交的數位產品"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">公開網址 Slug</label>
+          <input
+            type="text"
+            value={slug}
+            onChange={(event) => setSlug(event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="例如：build-online-academy"
+          />
+        </div>
+
+        <div className="space-y-2">
           <label className="text-sm font-semibold text-gray-800">課程分類</label>
           <input
             type="text"
@@ -441,6 +549,23 @@ export default function CourseForm({
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="例如：1980"
           />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">上架狀態</label>
+          <select
+            value={status}
+            onChange={(event) =>
+              setStatus(event.target.value as "draft" | "published" | "archived")
+            }
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2">
@@ -521,6 +646,17 @@ export default function CourseForm({
             placeholder="https://example.com/cover.jpg"
           />
         </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">OG 圖網址</label>
+          <input
+            type="url"
+            value={ogImage}
+            onChange={(event) => setOgImage(event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="https://example.com/og-cover.jpg"
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -532,6 +668,78 @@ export default function CourseForm({
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="請簡要介紹課程內容與學習重點"
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">適合對象</label>
+          <textarea
+            value={targetAudience}
+            onChange={(event) => setTargetAudience(event.target.value)}
+            rows={5}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={"每行一項，例如：\n想建立線上課程的創作者\n希望擴大招生轉換的講師"}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">課程收穫</label>
+          <textarea
+            value={learningOutcomes}
+            onChange={(event) => setLearningOutcomes(event.target.value)}
+            rows={5}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={"每行一項，例如：\n完成從銷售頁到付款開通的商業流程\n學會設計售後與對帳機制"}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">常見問題</label>
+          <textarea
+            value={faq}
+            onChange={(event) => setFaq(event.target.value)}
+            rows={6}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={"每行一組，格式：問題 | 答案\n例如：購買後多久開通？ | 完成付款後立即開通"}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">銷售段落</label>
+          <textarea
+            value={salesBlocks}
+            onChange={(event) => setSalesBlocks(event.target.value)}
+            rows={6}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={"每行一組，格式：標題 | 內容\n例如：購買保障 | 7 天內可申請人工退款審核"}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">SEO 標題</label>
+          <input
+            type="text"
+            value={seoTitle}
+            onChange={(event) => setSeoTitle(event.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="搜尋結果標題"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">SEO 描述</label>
+          <textarea
+            value={seoDescription}
+            onChange={(event) => setSeoDescription(event.target.value)}
+            rows={4}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="搜尋結果與社群分享描述"
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -710,22 +918,11 @@ export default function CourseForm({
         )}
       </section>
 
-      <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <div>
-          <p className="text-sm font-semibold text-gray-800">公開發布</p>
-          <p className="text-xs text-gray-600">開啟後，課程會顯示在課程列表並允許學員購買。</p>
-        </div>
-        <label className="inline-flex cursor-pointer items-center gap-2">
-          <span className="text-sm font-semibold text-gray-800">
-            {published ? "已發布" : "草稿"}
-          </span>
-          <input
-            type="checkbox"
-            checked={published}
-            onChange={(event) => setPublished(event.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-        </label>
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <p className="text-sm font-semibold text-gray-800">上架說明</p>
+        <p className="mt-1 text-xs text-gray-600">
+          草稿不會在前台曝光；已上架課程可直接招生；封存則保留資料但不再對外販售。
+        </p>
       </div>
 
       {error ? (

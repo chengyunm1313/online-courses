@@ -18,7 +18,6 @@ interface CheckoutFormData {
   discountCode?: string;
   items: CheckoutItem[];
   paymentMethod: 'CREDIT' | 'ATM';
-  shippingMethod: 'HOME' | 'STORE';
   subtotal: number;
   tax: number;
   total: number;
@@ -27,7 +26,7 @@ interface CheckoutFormData {
 
 /**
  * 綠界 ECPay 結帳頁面
- * 用戶在此頁面選擇付款方式和配送方式
+ * 用戶在此頁面選擇付款方式並確認數位課程購買資訊
  */
 export default function CheckoutPage() {
   const router = useRouter();
@@ -35,7 +34,6 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'CREDIT' | 'ATM'>('CREDIT');
-  const [shippingMethod, setShippingMethod] = useState<'HOME' | 'STORE'>('HOME');
   const [notes, setNotes] = useState('');
 
   // 從 sessionStorage 取得購物車資料（由前端頁面存儲）
@@ -115,7 +113,6 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           courseIds: cartData.courseIds ?? cartData.items.map((item) => item.courseId),
           paymentMethod,
-          shippingMethod,
           discountCode: cartData.discountCode,
           notes: notes || undefined,
         }),
@@ -223,43 +220,6 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* 配送方式 */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">配送方式</h2>
-            <div className="space-y-3">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="shipping"
-                  value="HOME"
-                  checked={shippingMethod === 'HOME'}
-                  onChange={(e) =>
-                    setShippingMethod(e.target.value as 'HOME' | 'STORE')
-                  }
-                  className="w-4 h-4"
-                />
-                <span className="ml-3 text-gray-900">
-                  宅配送到府（免運費）
-                </span>
-              </label>
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="shipping"
-                  value="STORE"
-                  checked={shippingMethod === 'STORE'}
-                  onChange={(e) =>
-                    setShippingMethod(e.target.value as 'HOME' | 'STORE')
-                  }
-                  className="w-4 h-4"
-                />
-                <span className="ml-3 text-gray-900">
-                  超商取貨（運費 NT$50）
-                </span>
-              </label>
-            </div>
-          </div>
-
           {/* 付款方式 */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">付款方式</h2>
@@ -316,6 +276,26 @@ export default function CheckoutPage() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
+          </div>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-sm text-blue-900">
+            <h2 className="text-xl font-semibold">購買說明</h2>
+            <ul className="mt-3 space-y-2">
+              <li>付款成功後將立即開通課程，您可從「我的學習」開始觀看。</li>
+              <li>若需申請人工退款，請先閱讀退款政策並透過客服頁提交需求。</li>
+              <li>所有交易透過綠界金流處理，課程為數位內容，不涉及配送流程。</li>
+            </ul>
+            <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold">
+              <Link href="/refund-policy" className="rounded-full bg-white px-3 py-1.5 text-blue-700">
+                退款政策
+              </Link>
+              <Link href="/purchase-guide" className="rounded-full bg-white px-3 py-1.5 text-blue-700">
+                購買須知
+              </Link>
+              <Link href="/contact" className="rounded-full bg-white px-3 py-1.5 text-blue-700">
+                客服聯絡
+              </Link>
+            </div>
           </div>
 
           {/* 提交按鈕 */}

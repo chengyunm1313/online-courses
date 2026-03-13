@@ -1,4 +1,8 @@
-import { getCourseByIdFromStore, listEnrollmentsByUser } from "@/lib/d1-repository";
+import {
+  getCourseByIdFromStore,
+  listEnrollmentsByUser,
+  listLessonProgressForUserCourse,
+} from "@/lib/d1-repository";
 
 interface ModuleLessonBase {
   id: string;
@@ -52,10 +56,11 @@ export async function getLearningCoursesForUser(
         return null;
       }
 
+      const lessonProgress = await listLessonProgressForUserCourse(userId, enrollment.course_id);
       const completedSet = new Set(
-        enrollment.completed_lessons_json
-          ? (JSON.parse(enrollment.completed_lessons_json) as string[])
-          : [],
+        lessonProgress
+          .filter((item) => Boolean(item.completed_at))
+          .map((item) => item.lesson_id),
       );
       const flatLessons = course.modules.flatMap((module) => module.lessons);
       const completedLessonsCount = flatLessons.filter((lesson) => completedSet.has(lesson.id)).length;

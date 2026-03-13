@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { evaluateDiscount } from "@/lib/checkout";
+import { consumeDiscountUsage, evaluateDiscount } from "@/lib/checkout";
 import { createOrderRecord } from "@/lib/d1-repository";
 import {
   generateCheckMacValue,
@@ -17,7 +17,6 @@ interface CheckoutRequestBody {
   courseId?: string;
   courseIds?: string[];
   paymentMethod?: "CREDIT" | "ATM";
-  shippingMethod?: "HOME" | "STORE";
   discountCode?: string;
   notes?: string;
 }
@@ -50,14 +49,17 @@ export async function POST(request: NextRequest) {
 
     const resolvedCourses = courses.filter((course): course is NonNullable<typeof course> => Boolean(course));
     const subtotal = resolvedCourses.reduce((sum, course) => sum + course.price, 0);
-    const discount = evaluateDiscount(subtotal, body.discountCode);
+    const discount = await evaluateDiscount({
+      originalPrice: subtotal,
+      rawCode: body.discountCode,
+      courseIds,
+    });
     if (!discount.valid) {
       return NextResponse.json({ error: discount.message }, { status: 400 });
     }
 
     const total = discount.finalPrice;
     const paymentMethod = body.paymentMethod === "ATM" ? "ATM" : "CREDIT";
-    const shippingMethod = body.shippingMethod === "STORE" ? "STORE" : "HOME";
     const merchantTradeNo = generateMerchantTradeNo();
 
     const orderId = await createOrderRecord({
@@ -76,10 +78,12 @@ export async function POST(request: NextRequest) {
       total,
       status: "CREATED",
       paymentMethod,
-      shippingMethod,
       merchantTradeNo,
       notes: body.notes?.trim() || discount.code ? [body.notes?.trim(), discount.code ? `折扣碼: ${discount.code}` : ""].filter(Boolean).join("\n") : undefined,
+      reconciliationStatus: "pending",
+      refundStatus: "none",
     });
+    await consumeDiscountUsage(discount.discountId);
 
     if (session.user.email) {
       void sendOrderCreatedEmail({

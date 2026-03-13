@@ -1,4 +1,4 @@
-import type { Order } from "@/types/order";
+import type { Order, ReconciliationStatus, RefundStatus } from "@/types/order";
 import {
   createOrderEvent,
   createOrderRecord,
@@ -60,6 +60,27 @@ export async function updateOrderStatus(
 
 export async function getOrderStats() {
   return getOrderStatsFromStore();
+}
+
+export async function updateOrderOperations(input: {
+  orderId: string;
+  refundStatus?: RefundStatus;
+  refundReason?: string;
+  refundNote?: string;
+  refundRequestedAt?: Date;
+  refundedAt?: Date;
+  reconciliationStatus?: ReconciliationStatus;
+  notes?: string;
+}) {
+  await updateOrderRecord(input.orderId, {
+    refundStatus: input.refundStatus,
+    refundReason: input.refundReason,
+    refundNote: input.refundNote,
+    refundRequestedAt: input.refundRequestedAt,
+    refundedAt: input.refundedAt,
+    reconciliationStatus: input.reconciliationStatus,
+    notes: input.notes,
+  });
 }
 
 export async function recordOrderEvent(input: {

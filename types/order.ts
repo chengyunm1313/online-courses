@@ -1,5 +1,7 @@
 export type OrderStatus = 'CREATED' | 'PAID' | 'FAILED' | 'CANCELED' | 'pending' | 'completed' | 'cancelled' | 'refunded';
 export type PaymentMethod = 'CREDIT' | 'ATM' | 'credit_card' | 'paypal' | 'bank_transfer' | 'other';
+export type RefundStatus = 'none' | 'requested' | 'processing' | 'refunded';
+export type ReconciliationStatus = 'pending' | 'matched' | 'flagged';
 
 export interface OrderItem {
   courseId: string;
@@ -42,6 +44,12 @@ export interface Order {
   failedAt?: Date;
   canceledAt?: Date;
   shippingMethod?: 'HOME' | 'STORE';
+  refundStatus?: RefundStatus;
+  refundReason?: string;
+  refundNote?: string;
+  refundRequestedAt?: Date;
+  refundedAt?: Date;
+  reconciliationStatus?: ReconciliationStatus;
 }
 
 export interface OrderFilters {

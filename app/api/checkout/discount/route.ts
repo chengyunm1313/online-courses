@@ -23,7 +23,11 @@ export async function POST(request: Request) {
     }
 
     const originalPrice = course.price;
-    const result = evaluateDiscount(originalPrice, code);
+    const result = await evaluateDiscount({
+      originalPrice,
+      rawCode: code,
+      courseIds: [course.id],
+    });
 
     return NextResponse.json(result, {
       status: result.valid ? 200 : 400,

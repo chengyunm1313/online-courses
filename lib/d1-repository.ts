@@ -1,6 +1,21 @@
 import { mockCourses } from "@/lib/mock-data";
-import type { Course, CourseModule, CourseModuleItem, CourseSyllabus } from "@/types/course";
-import type { Order, OrderItem, OrderStats, OrderStatus, PaymentMethod } from "@/types/order";
+import type {
+  Course,
+  CourseFaqItem,
+  CourseModule,
+  CourseModuleItem,
+  CourseSalesBlock,
+  CourseSyllabus,
+} from "@/types/course";
+import type {
+  Order,
+  OrderItem,
+  OrderStats,
+  OrderStatus,
+  PaymentMethod,
+  ReconciliationStatus,
+  RefundStatus,
+} from "@/types/order";
 import { D1ConfigError, executeD1, isD1Configured, queryD1, queryFirstD1 } from "@/lib/d1";
 
 export type AppRole = "student" | "instructor" | "admin";
@@ -18,8 +33,12 @@ interface UserRow {
 interface CourseRow {
   id: string;
   title: string;
+  subtitle: string | null;
+  slug: string | null;
+  status: "draft" | "published" | "archived";
   description: string;
   thumbnail: string | null;
+  og_image: string | null;
   price: number;
   category: string | null;
   level: "beginner" | "intermediate" | "advanced";
@@ -32,6 +51,12 @@ interface CourseRow {
   instructor_name: string | null;
   instructor_avatar: string | null;
   instructor_bio: string | null;
+  target_audience_json: string | null;
+  learning_outcomes_json: string | null;
+  faq_json: string | null;
+  sales_blocks_json: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
   published: number;
   created_at: string;
   updated_at: string;
@@ -84,6 +109,12 @@ interface OrderRow {
   notes: string | null;
   transaction_id: string | null;
   ecpay_data_json: string | null;
+  refund_status: RefundStatus;
+  refund_reason: string | null;
+  refund_note: string | null;
+  refund_requested_at: string | null;
+  refunded_at: string | null;
+  reconciliation_status: ReconciliationStatus;
   created_at: string;
   updated_at: string;
   paid_at: string | null;
@@ -110,6 +141,51 @@ interface OrderEventRow {
   created_at: string;
 }
 
+interface DiscountRow {
+  id: string;
+  code: string;
+  type: "percentage" | "amount";
+  value: number;
+  description: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  usage_limit: number | null;
+  per_user_limit: number | null;
+  minimum_amount: number;
+  course_ids_json: string | null;
+  enabled: number;
+  usage_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface LessonProgressRow {
+  id: string;
+  user_id: string;
+  course_id: string;
+  lesson_id: string;
+  completed_at: string | null;
+  last_position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DiscountRecord {
+  id: string;
+  code: string;
+  type: "percentage" | "amount";
+  value: number;
+  description?: string;
+  startsAt?: string;
+  endsAt?: string;
+  usageLimit?: number;
+  perUserLimit?: number;
+  minimumAmount: number;
+  courseIds: string[];
+  enabled: boolean;
+  usageCount: number;
+}
+
 const PLACEHOLDER_THUMBNAIL =
   "https://images.unsplash.com/photo-1523580846011-d3a5bc25702b?w=800";
 const DEFAULT_INSTRUCTOR_ID = "demo-instructor-skypassion5000";
@@ -133,6 +209,18 @@ function parseJsonArray(value: string | null | undefined): string[] {
       return [];
     }
     return parsed.map((item) => String(item));
+  } catch {
+    return [];
+  }
+}
+
+function parseJsonTypedArray<T>(value: string | null | undefined): T[] {
+  if (!value) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
   } catch {
     return [];
   }
@@ -187,8 +275,11 @@ function mapCourseRow(
   return {
     id: row.id,
     title: row.title,
+    subtitle: row.subtitle ?? undefined,
+    slug: row.slug ?? undefined,
     description: row.description,
     thumbnail: row.thumbnail ?? PLACEHOLDER_THUMBNAIL,
+    ogImage: row.og_image ?? undefined,
     instructor: {
       id: row.instructor_id ?? DEFAULT_INSTRUCTOR_ID,
       name: row.instructor_name ?? "未設定講師",
@@ -205,6 +296,13 @@ function mapCourseRow(
     syllabus,
     modules,
     tags: parseJsonArray(row.tags_json),
+    status: row.status ?? (row.published ? "published" : "draft"),
+    targetAudience: parseJsonArray(row.target_audience_json),
+    learningOutcomes: parseJsonArray(row.learning_outcomes_json),
+    faq: parseJsonTypedArray<CourseFaqItem>(row.faq_json),
+    salesBlocks: parseJsonTypedArray<CourseSalesBlock>(row.sales_blocks_json),
+    seoTitle: row.seo_title ?? undefined,
+    seoDescription: row.seo_description ?? undefined,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     published: Boolean(row.published),
@@ -316,15 +414,20 @@ async function seedMockCourses(): Promise<void> {
 
     await executeD1(
       `INSERT OR REPLACE INTO courses (
-        id, title, description, thumbnail, price, category, level, duration, lessons,
+        id, title, subtitle, slug, status, description, thumbnail, og_image, price, category, level, duration, lessons,
         rating, students_enrolled, tags_json, instructor_id, instructor_name, instructor_avatar,
-        instructor_bio, published, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        instructor_bio, target_audience_json, learning_outcomes_json, faq_json, sales_blocks_json,
+        seo_title, seo_description, published, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         course.id,
         course.title,
+        course.subtitle ?? null,
+        course.slug ?? course.id,
+        course.status ?? (course.published ? "published" : "draft"),
         course.description,
         course.thumbnail,
+        course.ogImage ?? null,
         course.price,
         course.category,
         course.level,
@@ -337,6 +440,12 @@ async function seedMockCourses(): Promise<void> {
         course.instructor.name,
         course.instructor.avatar,
         course.instructor.bio,
+        stringifyJson(course.targetAudience ?? []),
+        stringifyJson(course.learningOutcomes ?? []),
+        stringifyJson(course.faq ?? []),
+        stringifyJson(course.salesBlocks ?? []),
+        course.seoTitle ?? null,
+        course.seoDescription ?? null,
         course.published ? 1 : 0,
         createdAt,
         updatedAt,
@@ -377,6 +486,71 @@ async function seedMockCourses(): Promise<void> {
   }
 }
 
+async function seedDefaultDiscounts(): Promise<void> {
+  const existing = await queryFirstD1<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM discounts`,
+  );
+  if (Number(existing?.count ?? 0) > 0) {
+    return;
+  }
+  const now = nowIso();
+  const defaults: Array<Omit<DiscountRecord, "id" | "usageCount">> = [
+    {
+      code: "WELCOME10",
+      type: "percentage",
+      value: 10,
+      description: "新會員九折優惠",
+      minimumAmount: 0,
+      courseIds: [],
+      enabled: true,
+    },
+    {
+      code: "STUDENT200",
+      type: "amount",
+      value: 200,
+      description: "學生專屬折抵 NT$200",
+      minimumAmount: 0,
+      courseIds: [],
+      enabled: true,
+    },
+    {
+      code: "VIP500",
+      type: "amount",
+      value: 500,
+      description: "VIP 折抵 NT$500",
+      minimumAmount: 0,
+      courseIds: [],
+      enabled: true,
+    },
+  ];
+
+  for (const discount of defaults) {
+    await executeD1(
+      `INSERT OR IGNORE INTO discounts (
+        id, code, type, value, description, starts_at, ends_at, usage_limit, per_user_limit,
+        minimum_amount, course_ids_json, enabled, usage_count, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        crypto.randomUUID(),
+        discount.code,
+        discount.type,
+        discount.value,
+        discount.description ?? null,
+        null,
+        null,
+        null,
+        null,
+        discount.minimumAmount,
+        stringifyJson(discount.courseIds),
+        discount.enabled ? 1 : 0,
+        0,
+        now,
+        now,
+      ],
+    );
+  }
+}
+
 export async function ensureD1Seeded(): Promise<void> {
   if (!isD1Configured()) {
     return;
@@ -387,6 +561,7 @@ export async function ensureD1Seeded(): Promise<void> {
       try {
         await seedDefaultUsers();
         await seedMockCourses();
+        await seedDefaultDiscounts();
       } catch (error) {
         if (error instanceof D1ConfigError) {
           return;
@@ -590,6 +765,12 @@ export interface OrderDraft {
   paidAt?: Date;
   failedAt?: Date;
   canceledAt?: Date;
+  refundStatus?: RefundStatus;
+  refundReason?: string;
+  refundNote?: string;
+  refundRequestedAt?: Date;
+  refundedAt?: Date;
+  reconciliationStatus?: ReconciliationStatus;
 }
 
 function mapOrder(
@@ -618,6 +799,12 @@ function mapOrder(
     failedAt: row.failed_at ? new Date(row.failed_at) : undefined,
     canceledAt: row.canceled_at ? new Date(row.canceled_at) : undefined,
     completedAt: row.paid_at ? new Date(row.paid_at) : undefined,
+    refundStatus: row.refund_status ?? "none",
+    refundReason: row.refund_reason ?? undefined,
+    refundNote: row.refund_note ?? undefined,
+    refundRequestedAt: row.refund_requested_at ? new Date(row.refund_requested_at) : undefined,
+    refundedAt: row.refunded_at ? new Date(row.refunded_at) : undefined,
+    reconciliationStatus: row.reconciliation_status ?? "pending",
   };
 }
 
@@ -654,8 +841,9 @@ export async function createOrderRecord(input: OrderDraft): Promise<string> {
     `INSERT INTO orders (
       id, user_id, user_name, user_email, merchant_trade_no, status, payment_method,
       shipping_method, subtotal, tax, total, notes, transaction_id, ecpay_data_json,
+      refund_status, refund_reason, refund_note, refund_requested_at, refunded_at, reconciliation_status,
       created_at, updated_at, paid_at, failed_at, canceled_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.userId,
@@ -671,6 +859,12 @@ export async function createOrderRecord(input: OrderDraft): Promise<string> {
       input.notes ?? null,
       input.transactionId ?? null,
       input.ecpayData ? stringifyJson(input.ecpayData) : null,
+      input.refundStatus ?? "none",
+      input.refundReason ?? null,
+      input.refundNote ?? null,
+      input.refundRequestedAt ? input.refundRequestedAt.toISOString() : null,
+      input.refundedAt ? input.refundedAt.toISOString() : null,
+      input.reconciliationStatus ?? "pending",
       now,
       now,
       input.paidAt ? input.paidAt.toISOString() : null,
@@ -749,6 +943,12 @@ export async function updateOrderRecord(
     paidAt: Date;
     failedAt: Date;
     canceledAt: Date;
+    refundStatus: RefundStatus;
+    refundReason: string;
+    refundNote: string;
+    refundRequestedAt: Date;
+    refundedAt: Date;
+    reconciliationStatus: ReconciliationStatus;
   }>,
 ): Promise<void> {
   const existing = await queryFirstD1<OrderRow>(
@@ -761,7 +961,8 @@ export async function updateOrderRecord(
 
   await executeD1(
     `UPDATE orders
-     SET status = ?, notes = ?, transaction_id = ?, ecpay_data_json = ?, paid_at = ?, failed_at = ?, canceled_at = ?, updated_at = ?
+     SET status = ?, notes = ?, transaction_id = ?, ecpay_data_json = ?, paid_at = ?, failed_at = ?, canceled_at = ?,
+         refund_status = ?, refund_reason = ?, refund_note = ?, refund_requested_at = ?, refunded_at = ?, reconciliation_status = ?, updated_at = ?
      WHERE id = ?`,
     [
       updates.status ?? existing.status,
@@ -771,6 +972,12 @@ export async function updateOrderRecord(
       updates.paidAt ? updates.paidAt.toISOString() : existing.paid_at,
       updates.failedAt ? updates.failedAt.toISOString() : existing.failed_at,
       updates.canceledAt ? updates.canceledAt.toISOString() : existing.canceled_at,
+      updates.refundStatus ?? existing.refund_status,
+      updates.refundReason ?? existing.refund_reason,
+      updates.refundNote ?? existing.refund_note,
+      updates.refundRequestedAt ? updates.refundRequestedAt.toISOString() : existing.refund_requested_at,
+      updates.refundedAt ? updates.refundedAt.toISOString() : existing.refunded_at,
+      updates.reconciliationStatus ?? existing.reconciliation_status,
       nowIso(),
       orderId,
     ],
@@ -887,6 +1094,176 @@ export async function touchEnrollment(input: {
   );
 }
 
+export async function listLessonProgressForUserCourse(
+  userId: string,
+  courseId: string,
+): Promise<LessonProgressRow[]> {
+  return queryD1<LessonProgressRow>(
+    `SELECT * FROM lesson_progress WHERE user_id = ? AND course_id = ? ORDER BY updated_at DESC`,
+    [userId, courseId],
+  );
+}
+
+export async function upsertLessonProgress(input: {
+  userId: string;
+  courseId: string;
+  lessonId: string;
+  completed: boolean;
+  lastPosition?: number;
+}): Promise<void> {
+  const existing = await queryFirstD1<LessonProgressRow>(
+    `SELECT * FROM lesson_progress WHERE user_id = ? AND course_id = ? AND lesson_id = ? LIMIT 1`,
+    [input.userId, input.courseId, input.lessonId],
+  );
+  const now = nowIso();
+
+  if (existing) {
+    await executeD1(
+      `UPDATE lesson_progress
+       SET completed_at = ?, last_position = ?, updated_at = ?
+       WHERE id = ?`,
+      [
+        input.completed ? now : null,
+        input.lastPosition ?? existing.last_position,
+        now,
+        existing.id,
+      ],
+    );
+  } else {
+    await executeD1(
+      `INSERT INTO lesson_progress (
+        id, user_id, course_id, lesson_id, completed_at, last_position, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        crypto.randomUUID(),
+        input.userId,
+        input.courseId,
+        input.lessonId,
+        input.completed ? now : null,
+        input.lastPosition ?? 0,
+        now,
+        now,
+      ],
+    );
+  }
+
+  const progressRows = await listLessonProgressForUserCourse(input.userId, input.courseId);
+  const completedLessons = progressRows
+    .filter((row) => Boolean(row.completed_at))
+    .map((row) => row.lesson_id);
+  await touchEnrollment({
+    userId: input.userId,
+    courseId: input.courseId,
+    completedLessons,
+  });
+}
+
+function mapDiscountRow(row: DiscountRow): DiscountRecord {
+  return {
+    id: row.id,
+    code: row.code,
+    type: row.type,
+    value: Number(row.value ?? 0),
+    description: row.description ?? undefined,
+    startsAt: row.starts_at ?? undefined,
+    endsAt: row.ends_at ?? undefined,
+    usageLimit: row.usage_limit ?? undefined,
+    perUserLimit: row.per_user_limit ?? undefined,
+    minimumAmount: Number(row.minimum_amount ?? 0),
+    courseIds: parseJsonArray(row.course_ids_json),
+    enabled: Boolean(row.enabled),
+    usageCount: Number(row.usage_count ?? 0),
+  };
+}
+
+export async function listDiscountsFromStore(): Promise<DiscountRecord[]> {
+  await ensureD1Seeded();
+  if (!isD1Configured()) {
+    return [];
+  }
+  const rows = await queryD1<DiscountRow>(`SELECT * FROM discounts ORDER BY updated_at DESC`);
+  return rows.map(mapDiscountRow);
+}
+
+export async function getDiscountByCodeFromStore(code: string): Promise<DiscountRecord | null> {
+  await ensureD1Seeded();
+  if (!isD1Configured()) {
+    return null;
+  }
+  const row = await queryFirstD1<DiscountRow>(
+    `SELECT * FROM discounts WHERE code = ? LIMIT 1`,
+    [code.toUpperCase()],
+  );
+  return row ? mapDiscountRow(row) : null;
+}
+
+export async function createDiscountRecord(input: Omit<DiscountRecord, "id" | "usageCount">): Promise<string> {
+  const id = crypto.randomUUID();
+  const now = nowIso();
+  await executeD1(
+    `INSERT INTO discounts (
+      id, code, type, value, description, starts_at, ends_at, usage_limit, per_user_limit,
+      minimum_amount, course_ids_json, enabled, usage_count, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.code.toUpperCase(),
+      input.type,
+      input.value,
+      input.description ?? null,
+      input.startsAt ?? null,
+      input.endsAt ?? null,
+      input.usageLimit ?? null,
+      input.perUserLimit ?? null,
+      input.minimumAmount,
+      stringifyJson(input.courseIds),
+      input.enabled ? 1 : 0,
+      0,
+      now,
+      now,
+    ],
+  );
+  return id;
+}
+
+export async function updateDiscountRecord(
+  id: string,
+  input: Partial<Omit<DiscountRecord, "id" | "usageCount">>,
+): Promise<void> {
+  const existing = await queryFirstD1<DiscountRow>(`SELECT * FROM discounts WHERE id = ? LIMIT 1`, [id]);
+  if (!existing) {
+    throw new Error("找不到折扣碼");
+  }
+  await executeD1(
+    `UPDATE discounts
+     SET code = ?, type = ?, value = ?, description = ?, starts_at = ?, ends_at = ?, usage_limit = ?,
+         per_user_limit = ?, minimum_amount = ?, course_ids_json = ?, enabled = ?, updated_at = ?
+     WHERE id = ?`,
+    [
+      input.code?.toUpperCase() ?? existing.code,
+      input.type ?? existing.type,
+      input.value ?? existing.value,
+      input.description ?? existing.description,
+      input.startsAt ?? existing.starts_at,
+      input.endsAt ?? existing.ends_at,
+      input.usageLimit ?? existing.usage_limit,
+      input.perUserLimit ?? existing.per_user_limit,
+      input.minimumAmount ?? existing.minimum_amount,
+      input.courseIds ? stringifyJson(input.courseIds) : existing.course_ids_json,
+      typeof input.enabled === "boolean" ? (input.enabled ? 1 : 0) : existing.enabled,
+      nowIso(),
+      id,
+    ],
+  );
+}
+
+export async function incrementDiscountUsage(id: string): Promise<void> {
+  await executeD1(
+    `UPDATE discounts SET usage_count = usage_count + 1, updated_at = ? WHERE id = ?`,
+    [nowIso(), id],
+  );
+}
+
 export async function listEnrollmentsByUser(userId: string): Promise<EnrollmentRow[]> {
   return queryD1<EnrollmentRow>(
     `SELECT * FROM enrollments WHERE user_id = ? ORDER BY created_at DESC`,
@@ -896,8 +1273,12 @@ export async function listEnrollmentsByUser(userId: string): Promise<EnrollmentR
 
 export async function createCourseRecord(input: {
   title: string;
+  subtitle?: string;
+  slug?: string;
+  status: "draft" | "published" | "archived";
   description: string;
   thumbnail?: string;
+  ogImage?: string;
   price: number;
   category?: string;
   level: "beginner" | "intermediate" | "advanced";
@@ -909,21 +1290,32 @@ export async function createCourseRecord(input: {
   instructorName: string;
   instructorAvatar?: string;
   instructorBio?: string;
+  targetAudience: string[];
+  learningOutcomes: string[];
+  faq: CourseFaqItem[];
+  salesBlocks: CourseSalesBlock[];
+  seoTitle?: string;
+  seoDescription?: string;
   modules: CourseModule[];
 }): Promise<string> {
   const id = crypto.randomUUID();
   const now = nowIso();
   await executeD1(
-    `INSERT INTO courses (
-      id, title, description, thumbnail, price, category, level, duration, lessons,
+      `INSERT INTO courses (
+      id, title, subtitle, slug, status, description, thumbnail, og_image, price, category, level, duration, lessons,
       rating, students_enrolled, tags_json, instructor_id, instructor_name, instructor_avatar,
-      instructor_bio, published, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      instructor_bio, target_audience_json, learning_outcomes_json, faq_json, sales_blocks_json,
+      seo_title, seo_description, published, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.title,
+      input.subtitle ?? null,
+      input.slug ?? id,
+      input.status,
       input.description,
       input.thumbnail ?? null,
+      input.ogImage ?? null,
       input.price,
       input.category ?? null,
       input.level,
@@ -936,7 +1328,13 @@ export async function createCourseRecord(input: {
       input.instructorName,
       input.instructorAvatar ?? null,
       input.instructorBio ?? null,
-      input.published ? 1 : 0,
+      stringifyJson(input.targetAudience),
+      stringifyJson(input.learningOutcomes),
+      stringifyJson(input.faq),
+      stringifyJson(input.salesBlocks),
+      input.seoTitle ?? null,
+      input.seoDescription ?? null,
+      input.status === "published" ? 1 : 0,
       now,
       now,
     ],
@@ -990,8 +1388,12 @@ export async function replaceCourseModules(courseId: string, modules: CourseModu
 export async function updateCourseRecord(input: {
   id: string;
   title: string;
+  subtitle?: string;
+  slug?: string;
+  status: "draft" | "published" | "archived";
   description: string;
   thumbnail?: string;
+  ogImage?: string;
   price: number;
   category?: string;
   level: "beginner" | "intermediate" | "advanced";
@@ -1003,29 +1405,46 @@ export async function updateCourseRecord(input: {
   instructorName: string;
   instructorAvatar?: string;
   instructorBio?: string;
+  targetAudience: string[];
+  learningOutcomes: string[];
+  faq: CourseFaqItem[];
+  salesBlocks: CourseSalesBlock[];
+  seoTitle?: string;
+  seoDescription?: string;
   modules: CourseModule[];
 }): Promise<void> {
   await executeD1(
     `UPDATE courses
-     SET title = ?, description = ?, thumbnail = ?, price = ?, category = ?, level = ?, duration = ?,
+     SET title = ?, subtitle = ?, slug = ?, status = ?, description = ?, thumbnail = ?, og_image = ?, price = ?, category = ?, level = ?, duration = ?,
          lessons = ?, tags_json = ?, published = ?, instructor_id = ?, instructor_name = ?, instructor_avatar = ?,
-         instructor_bio = ?, updated_at = ?
+         instructor_bio = ?, target_audience_json = ?, learning_outcomes_json = ?, faq_json = ?, sales_blocks_json = ?,
+         seo_title = ?, seo_description = ?, updated_at = ?
      WHERE id = ?`,
     [
       input.title,
+      input.subtitle ?? null,
+      input.slug ?? input.id,
+      input.status,
       input.description,
       input.thumbnail ?? null,
+      input.ogImage ?? null,
       input.price,
       input.category ?? null,
       input.level,
       input.duration,
       input.lessons,
       stringifyJson(input.tags),
-      input.published ? 1 : 0,
+      input.status === "published" ? 1 : 0,
       input.instructorId,
       input.instructorName,
       input.instructorAvatar ?? null,
       input.instructorBio ?? null,
+      stringifyJson(input.targetAudience),
+      stringifyJson(input.learningOutcomes),
+      stringifyJson(input.faq),
+      stringifyJson(input.salesBlocks),
+      input.seoTitle ?? null,
+      input.seoDescription ?? null,
       nowIso(),
       input.id,
     ],

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import { getLearningCoursesForUser } from "@/lib/learning";
+import LessonProgressToggle from "@/components/learning/LessonProgressToggle";
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("zh-TW");
@@ -230,12 +231,19 @@ export default async function LearningPage() {
                                             </p>
                                           </div>
                                         </div>
-                                        <Link
-                                          href={`/courses/${course.courseId}#lesson-${lesson.id}`}
-                                          className="inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-700"
-                                        >
-                                          前往章節
-                                        </Link>
+                                        <div className="flex items-center gap-3">
+                                          <Link
+                                            href={`/courses/${course.courseId}#lesson-${lesson.id}`}
+                                            className="inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                          >
+                                            前往章節
+                                          </Link>
+                                          <LessonProgressToggle
+                                            courseId={course.courseId}
+                                            lessonId={lesson.id}
+                                            initialCompleted={lesson.completed}
+                                          />
+                                        </div>
                                       </li>
                                     );
                                   })}

@@ -29,7 +29,11 @@ export default async function CheckoutATMPage({
   const resolvedSearch = (await searchParams) ?? {};
   const codeParam =
     typeof resolvedSearch.code === "string" ? resolvedSearch.code : undefined;
-  const discountResult = evaluateDiscount(course.price, codeParam);
+  const discountResult = await evaluateDiscount({
+    originalPrice: course.price,
+    rawCode: codeParam,
+    courseIds: [course.id],
+  });
 
   const summary = {
     title: course.title,

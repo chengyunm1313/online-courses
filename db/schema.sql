@@ -11,8 +11,12 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS courses (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
+  subtitle TEXT,
+  slug TEXT UNIQUE,
+  status TEXT NOT NULL DEFAULT 'draft',
   description TEXT NOT NULL DEFAULT '',
   thumbnail TEXT,
+  og_image TEXT,
   price INTEGER NOT NULL DEFAULT 0,
   category TEXT,
   level TEXT NOT NULL DEFAULT 'beginner',
@@ -25,6 +29,12 @@ CREATE TABLE IF NOT EXISTS courses (
   instructor_name TEXT,
   instructor_avatar TEXT,
   instructor_bio TEXT,
+  target_audience_json TEXT,
+  learning_outcomes_json TEXT,
+  faq_json TEXT,
+  sales_blocks_json TEXT,
+  seo_title TEXT,
+  seo_description TEXT,
   published INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -66,6 +76,12 @@ CREATE TABLE IF NOT EXISTS orders (
   notes TEXT,
   transaction_id TEXT,
   ecpay_data_json TEXT,
+  refund_status TEXT NOT NULL DEFAULT 'none',
+  refund_reason TEXT,
+  refund_note TEXT,
+  refund_requested_at TEXT,
+  refunded_at TEXT,
+  reconciliation_status TEXT NOT NULL DEFAULT 'pending',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   paid_at TEXT,
@@ -107,8 +123,41 @@ CREATE TABLE IF NOT EXISTS order_events (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS discounts (
+  id TEXT PRIMARY KEY,
+  code TEXT NOT NULL UNIQUE,
+  type TEXT NOT NULL,
+  value INTEGER NOT NULL,
+  description TEXT,
+  starts_at TEXT,
+  ends_at TEXT,
+  usage_limit INTEGER,
+  per_user_limit INTEGER,
+  minimum_amount INTEGER NOT NULL DEFAULT 0,
+  course_ids_json TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  usage_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS lesson_progress (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  course_id TEXT NOT NULL,
+  lesson_id TEXT NOT NULL,
+  completed_at TEXT,
+  last_position INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE (user_id, course_id, lesson_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_courses_published ON courses (published, updated_at);
+CREATE INDEX IF NOT EXISTS idx_courses_status ON courses (status, updated_at);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_merchant_trade_no ON orders (merchant_trade_no);
 CREATE INDEX IF NOT EXISTS idx_enrollments_user_id ON enrollments (user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_order_events_event_key ON order_events (event_key);
+CREATE INDEX IF NOT EXISTS idx_discounts_code ON discounts (code, enabled);
+CREATE INDEX IF NOT EXISTS idx_lesson_progress_user_course ON lesson_progress (user_id, course_id);

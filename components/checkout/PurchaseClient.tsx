@@ -99,7 +99,6 @@ export default function PurchaseClient({ course }: PurchaseClientProps) {
           },
         ],
         paymentMethod: 'CREDIT',
-        shippingMethod: 'HOME',
         subtotal: finalPrice,
         tax: 0,
         total: finalPrice,

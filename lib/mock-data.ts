@@ -5,7 +5,7 @@ import { Course } from "@/types/course";
  * In production, this will be replaced with Firebase data
  */
 
-export const mockCourses: Course[] = [
+const mockCourseSeed = [
   {
     id: "1",
     title: "完整 Web 開發入門：從零開始學習前端與後端",
@@ -380,6 +380,21 @@ export const mockCourses: Course[] = [
     published: true
   }
 ];
+
+export const mockCourses: Course[] = mockCourseSeed.map((course) => ({
+  ...course,
+  subtitle: "",
+  slug: course.id,
+  ogImage: course.thumbnail,
+  status: course.published ? "published" : "draft",
+  targetAudience: [],
+  learningOutcomes: [],
+  faq: [],
+  salesBlocks: [],
+  seoTitle: course.title,
+  seoDescription: course.description,
+  level: course.level as Course["level"],
+}));
 
 export const categories = [
   "程式開發",

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
@@ -48,6 +49,29 @@ const FALLBACK_QA = [
     answer: "課程提供終身不限次數觀看，隨時登入即可複習。",
   },
 ];
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const resolvedParams = await params;
+  const course = await getPublishedCourseById(resolvedParams.id);
+
+  if (!course) {
+    return { title: "找不到課程" };
+  }
+
+  return {
+    title: course.seoTitle || course.title,
+    description: course.seoDescription || course.description,
+    openGraph: {
+      title: course.seoTitle || course.title,
+      description: course.seoDescription || course.description,
+      images: course.ogImage ? [course.ogImage] : course.thumbnail ? [course.thumbnail] : [],
+    },
+  };
+}
 
 const FALLBACK_VIDEO_IDS = ["4mEddAUzzgk", "K2_lgpTThEw", "KHCHTCXGyug"];
 
@@ -151,6 +175,22 @@ export default async function CourseDetailPage({
   );
 
   const flatLessons = modules.flatMap((module) => module.lessons);
+  const targetAudience =
+    course.targetAudience.length > 0
+      ? course.targetAudience
+      : [`想要提升 ${course.category} 能力的學員`, "需要實作導向課程與可直接落地範例的工作者"];
+  const learningOutcomes =
+    course.learningOutcomes.length > 0
+      ? course.learningOutcomes
+      : ["能獨立規劃與完成實際專案", "熟悉工具與流程最佳實務", "累積可展示的作品與資源"];
+  const faqItems = course.faq.length > 0 ? course.faq : FALLBACK_FAQ;
+  const salesBlocks =
+    course.salesBlocks.length > 0
+      ? course.salesBlocks
+      : [
+          { title: "購買保障", content: "付款成功後立即開通，若有異常可聯繫客服人工協助。" },
+          { title: "交付方式", content: "課程屬數位內容，購買後可於我的學習持續觀看與追蹤進度。" },
+        ];
   const nextLessonCandidate = flatLessons.find(
     (lesson) => !completedLessonSet.has(lesson.id),
   );
@@ -191,6 +231,9 @@ export default async function CourseDetailPage({
                 <h1 className="mt-4 text-3xl font-bold md:text-4xl">
                   {course.title}
                 </h1>
+                {course.subtitle ? (
+                  <p className="mt-3 text-base font-medium text-blue-200">{course.subtitle}</p>
+                ) : null}
                 <p className="mt-3 text-lg text-gray-300">
                   {course.description || "講師尚未提供課程介紹。"}
                 </p>
@@ -352,9 +395,11 @@ export default async function CourseDetailPage({
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <p className="text-sm text-gray-600">最適合</p>
-              <p className="mt-1 text-base font-semibold text-gray-900">
-                想要提升 {course.category} 能力的學員
-              </p>
+              <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                {targetAudience.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </div>
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <p className="text-sm text-gray-600">課程亮點</p>
@@ -367,9 +412,9 @@ export default async function CourseDetailPage({
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <p className="text-sm text-gray-600">學習成果</p>
               <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-gray-700">
-                <li>能獨立規劃與完成實際專案</li>
-                <li>熟悉工具與流程最佳實務</li>
-                <li>累積可展示的作品與資源</li>
+                {learningOutcomes.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
               </ul>
             </div>
           </div>
@@ -559,6 +604,14 @@ export default async function CourseDetailPage({
         ) : (
           <section id="plans" className="space-y-4">
             <h2 className="text-2xl font-bold text-gray-900">選購方案</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {salesBlocks.map((block) => (
+                <div key={block.title} className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                  <h3 className="text-base font-semibold text-amber-900">{block.title}</h3>
+                  <p className="mt-2 text-sm text-amber-800">{block.content}</p>
+                </div>
+              ))}
+            </div>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="rounded-xl border border-blue-200 bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -650,7 +703,7 @@ export default async function CourseDetailPage({
         <section id="faq" className="space-y-4">
           <h2 className="text-2xl font-bold text-gray-900">常見問題</h2>
           <div className="space-y-3">
-            {FALLBACK_FAQ.map((faq) => (
+            {faqItems.map((faq) => (
               <details
                 key={faq.question}
                 className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"

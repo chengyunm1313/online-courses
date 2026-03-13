@@ -71,16 +71,28 @@ export default function Navbar() {
                   </Link>
 
                   {session.user.role === "admin" && (
-                    <Link
-                      href="/admin"
-                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                        isActive("/admin") || pathname?.startsWith("/admin/")
-                          ? "border-blue-500 text-gray-900"
-                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                      }`}
-                    >
-                      後台管理
-                    </Link>
+                    <>
+                      <Link
+                        href="/admin"
+                        className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                          isActive("/admin")
+                            ? "border-blue-500 text-gray-900"
+                            : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        }`}
+                      >
+                        後台總覽
+                      </Link>
+                      <Link
+                        href="/admin/discounts"
+                        className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                          pathname?.startsWith("/admin/discounts")
+                            ? "border-blue-500 text-gray-900"
+                            : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        }`}
+                      >
+                        折扣碼
+                      </Link>
+                    </>
                   )}
                 </>
               )}

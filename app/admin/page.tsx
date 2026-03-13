@@ -111,15 +111,15 @@ export default async function AdminDashboard() {
           </Link>
 
           <Link
-            href="/admin/activity"
+            href="/admin/discounts"
             className="group rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow"
           >
-            <h2 className="text-sm font-semibold text-gray-900">活動紀錄</h2>
+            <h2 className="text-sm font-semibold text-gray-900">折扣與活動</h2>
             <p className="mt-2 text-xs text-gray-600">
-              即時掌握新報名、課程更新與使用者加入狀況。
+              管理促銷折扣碼、活動期間與使用上限，支援真實營運。
             </p>
             <span className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600">
-              檢視最新動態 →
+              前往折扣管理 →
             </span>
           </Link>
         </section>

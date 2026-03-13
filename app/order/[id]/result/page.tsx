@@ -18,7 +18,6 @@ interface OrderData {
     instructor: string;
   }>;
   paymentMethod: string;
-  shippingMethod: string;
   merchantTradeNo?: string;
   ecpayData?: {
     RtnCode?: number;
@@ -338,14 +337,8 @@ export default function OrderResultPage() {
             </div>
           </div>
 
-          {/* 配送方式 */}
+          {/* 付款資訊 */}
           <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-            <div>
-              <p className="text-sm text-gray-600">配送方式</p>
-              <p className="font-semibold text-gray-900">
-                {order.shippingMethod === 'HOME' ? '宅配送到府' : '超商取貨'}
-              </p>
-            </div>
             <div>
               <p className="text-sm text-gray-600">付款方式</p>
               <p className="font-semibold text-gray-900">
@@ -436,10 +429,18 @@ export default function OrderResultPage() {
         <div className="text-center py-4">
           <p className="text-gray-600">
             有任何問題？
-            <a href="mailto:support@example.com" className="text-blue-600 hover:underline ml-2">
+            <Link href="/contact" className="text-blue-600 hover:underline ml-2">
               聯繫客服
-            </a>
+            </Link>
           </p>
+          <div className="mt-3 flex justify-center gap-4 text-sm">
+            <Link href="/refund-policy" className="text-blue-600 hover:underline">
+              退款政策
+            </Link>
+            <Link href="/purchase-guide" className="text-blue-600 hover:underline">
+              購買須知
+            </Link>
+          </div>
         </div>
       </div>
     </div>

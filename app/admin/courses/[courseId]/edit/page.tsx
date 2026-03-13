@@ -56,16 +56,26 @@ export default async function AdminEditCoursePage({
             instructors={instructorOptions}
             initialValues={{
               title: course.title,
+              subtitle: course.subtitle,
+              slug: course.slug,
               description: course.description,
               thumbnail: course.thumbnail,
+              ogImage: course.ogImage,
               price: course.price,
               category: course.category,
               level: course.level as "beginner" | "intermediate" | "advanced",
+              status: course.status,
               duration: course.duration,
               lessons: course.lessons,
               tags: course.tags,
               published: course.published,
               instructorId: course.instructorId,
+              targetAudience: course.targetAudience,
+              learningOutcomes: course.learningOutcomes,
+              faq: course.faq,
+              salesBlocks: course.salesBlocks,
+              seoTitle: course.seoTitle,
+              seoDescription: course.seoDescription,
               modules: course.modules,
             }}
             redirectTo="/admin/courses"

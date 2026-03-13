@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import { getOrderById } from "@/lib/orders";
 import type { OrderItem } from "@/types/order";
+import OrderOperationsForm from "@/components/admin/OrderOperationsForm";
 
 function formatDate(value: Date | string | undefined) {
   if (!value) return "—";
@@ -27,6 +28,14 @@ function PaymentMethodLabel({ method }: { method: string }) {
     other: "其他",
   };
   return <>{map[method] ?? method}</>;
+}
+
+function formatDateTimeLocal(value?: Date | string) {
+  if (!value) return "";
+  const date = typeof value === "string" ? new Date(value) : value;
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60_000);
+  return local.toISOString().slice(0, 16);
 }
 
 const statusStyle: Record<string, string> = {
@@ -196,15 +205,26 @@ export default async function AdminOrderDetailPage({
           <aside className="space-y-4">
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900">操作</h2>
-              <p className="mt-2 text-sm text-gray-600">
-                若需更新訂單狀態或處理退款，可在後續版本於此處提供操作按鈕。
-              </p>
+              <div className="mt-4">
+                <OrderOperationsForm
+                  orderId={order.id}
+                  refundStatus={order.refundStatus}
+                  refundReason={order.refundReason}
+                  refundNote={order.refundNote}
+                  refundRequestedAt={formatDateTimeLocal(order.refundRequestedAt)}
+                  refundedAt={formatDateTimeLocal(order.refundedAt)}
+                  reconciliationStatus={order.reconciliationStatus}
+                  notes={order.notes}
+                />
+              </div>
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm space-y-3 text-sm text-gray-700">
               <h2 className="text-lg font-semibold text-gray-900">其他資訊</h2>
               <p>建立時間：{formatDate(order.createdAt)}</p>
               <p>更新時間：{formatDate(order.updatedAt)}</p>
+              <p>退款狀態：{order.refundStatus ?? "none"}</p>
+              <p>對帳狀態：{order.reconciliationStatus ?? "pending"}</p>
             </div>
           </aside>
         </div>
