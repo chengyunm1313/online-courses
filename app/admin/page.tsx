@@ -2,14 +2,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import {
   getAdminDashboardData,
   AdminCourseSummary,
   AdminInstructorSummary,
 } from "@/lib/admin-data";
-import UserRoleManager from "@/components/admin/UserRoleManager";
 
 const numberFormatter = new Intl.NumberFormat("zh-TW");
 const currencyFormatter = new Intl.NumberFormat("zh-TW", {
@@ -53,16 +51,13 @@ export default async function AdminDashboard() {
   }
 
   const dashboardData = await getAdminDashboardData();
-  const { stats, courseSummaries, instructorSummaries, users } = dashboardData;
+  const { stats, courseSummaries, instructorSummaries } = dashboardData;
 
   const displayedCourses: AdminCourseSummary[] = courseSummaries;
   const displayedInstructors: AdminInstructorSummary[] = instructorSummaries;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         <header className="space-y-2">
           <h1 className="text-3xl font-bold text-slate-950">後台管理儀表板</h1>
           <p className="text-sm leading-6 text-slate-700">
@@ -133,6 +128,32 @@ export default async function AdminDashboard() {
             </p>
             <span className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600">
               前往客服單 →
+            </span>
+          </Link>
+
+          <Link
+            href="/admin/settings/site"
+            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+          >
+            <h2 className="text-sm font-semibold text-slate-950">全站設定</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              集中管理客服資訊、頁尾文案與政策摘要，讓前台與通知信使用同一份設定。
+            </p>
+            <span className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600">
+              前往全站設定 →
+            </span>
+          </Link>
+
+          <Link
+            href="/admin/settings/users"
+            className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+          >
+            <h2 className="text-sm font-semibold text-slate-950">帳號與權限管理</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-700">
+              將角色維護從後台首頁抽離，改由設定頁集中管理管理員、講師與學生權限。
+            </p>
+            <span className="mt-3 inline-flex items-center text-xs font-semibold text-blue-600">
+              前往帳號設定 →
             </span>
           </Link>
         </section>
@@ -310,18 +331,7 @@ export default async function AdminDashboard() {
           </div>
         </section>
 
-        <UserRoleManager
-          users={users.map((user) => ({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            image: user.image,
-          }))}
-          currentUserId={session.user.id}
-        />
       </div>
-    </div>
   );
 }
 

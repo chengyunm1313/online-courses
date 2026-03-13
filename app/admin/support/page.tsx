@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import { listSupportTickets } from "@/lib/d1-repository";
 
@@ -30,9 +29,7 @@ export default async function AdminSupportPage() {
   const tickets = await listSupportTickets();
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 space-y-6">
+      <div className="mx-auto max-w-6xl space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-950">客服單管理</h1>
           <p className="mt-2 text-sm leading-6 text-slate-700">
@@ -83,6 +80,5 @@ export default async function AdminSupportPage() {
           </table>
         </div>
       </div>
-    </div>
   );
 }

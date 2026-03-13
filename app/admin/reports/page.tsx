@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import { getAdminReportData } from "@/lib/admin-data";
 
@@ -34,10 +33,7 @@ export default async function AdminReportsPage() {
   const report = await getAdminReportData();
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-slate-950">營運報表</h1>
           <p className="text-sm leading-6 text-slate-700">
@@ -351,6 +347,5 @@ export default async function AdminReportsPage() {
           </div>
         </section>
       </div>
-    </div>
   );
 }

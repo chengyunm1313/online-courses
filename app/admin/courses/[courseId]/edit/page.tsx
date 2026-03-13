@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import {
   getCourseForManagement,
@@ -37,10 +36,7 @@ export default async function AdminEditCoursePage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-3xl mx-auto space-y-8">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-gray-900">編輯課程</h1>
           <p className="text-sm text-gray-600">
@@ -58,10 +54,15 @@ export default async function AdminEditCoursePage({
               title: course.title,
               subtitle: course.subtitle,
               slug: course.slug,
+              heroTitle: course.heroTitle,
+              heroSubtitle: course.heroSubtitle,
+              guaranteeText: course.guaranteeText,
+              ctaLabel: course.ctaLabel,
               description: course.description,
               thumbnail: course.thumbnail,
               ogImage: course.ogImage,
               price: course.price,
+              originalPrice: course.originalPrice,
               category: course.category,
               level: course.level as "beginner" | "intermediate" | "advanced",
               status: course.status,
@@ -76,6 +77,19 @@ export default async function AdminEditCoursePage({
               salesBlocks: course.salesBlocks,
               seoTitle: course.seoTitle,
               seoDescription: course.seoDescription,
+              salesMode: course.salesMode,
+              salesStatus: course.salesStatus,
+              launchStartsAt: course.launchStartsAt,
+              launchEndsAt: course.launchEndsAt,
+              showCountdown: course.showCountdown,
+              showSeats: course.showSeats,
+              seatLimit: course.seatLimit,
+              soldCountMode: course.soldCountMode,
+              leadMagnetEnabled: course.leadMagnetEnabled,
+              leadMagnetTitle: course.leadMagnetTitle,
+              leadMagnetDescription: course.leadMagnetDescription,
+              leadMagnetCouponCode: course.leadMagnetCouponCode,
+              priceLadders: course.priceLadders,
               modules: course.modules,
             }}
             redirectTo="/admin/courses"
@@ -83,6 +97,5 @@ export default async function AdminEditCoursePage({
           />
         </div>
       </div>
-    </div>
   );
 }

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import Image from "next/image";
-import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import { getOrderById } from "@/lib/orders";
 import type { OrderItem } from "@/types/order";
@@ -75,10 +74,7 @@ export default async function AdminOrderDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-
-      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8 space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-950">訂單詳情</h1>
@@ -235,6 +231,5 @@ export default async function AdminOrderDetailPage({
           </aside>
         </div>
       </div>
-    </div>
   );
 }

@@ -246,6 +246,20 @@ interface WaitlistRow {
   updated_at: string;
 }
 
+interface SiteSettingsRow {
+  id: string;
+  platform_name: string;
+  support_email: string;
+  footer_notice: string;
+  contact_intro: string;
+  support_hours: string;
+  support_guidelines: string;
+  refund_summary: string;
+  purchase_guide_summary: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DiscountRecord {
   id: string;
   code: string;
@@ -320,6 +334,31 @@ export interface WaitlistRecordInput {
   payload?: Record<string, unknown>;
 }
 
+export interface SiteSettingsRecord {
+  id: string;
+  platformName: string;
+  supportEmail: string;
+  footerNotice: string;
+  contactIntro: string;
+  supportHours: string;
+  supportGuidelines: string;
+  refundSummary: string;
+  purchaseGuideSummary: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SiteSettingsInput {
+  platformName: string;
+  supportEmail: string;
+  footerNotice: string;
+  contactIntro: string;
+  supportHours: string;
+  supportGuidelines: string;
+  refundSummary: string;
+  purchaseGuideSummary: string;
+}
+
 export interface CheckoutFunnelMetrics {
   purchasePageViews: number;
   discountApplied: number;
@@ -332,6 +371,21 @@ export interface CheckoutFunnelMetrics {
   couponPopupClaimed: number;
   countdownClicked: number;
 }
+
+const DEFAULT_SITE_SETTINGS: SiteSettingsInput = {
+  platformName: "線上學院",
+  supportEmail: "chengyunm1313@gmail.com",
+  footerNotice: "提供優質的線上學習體驗，幫助每個人實現學習目標。",
+  contactIntro:
+    "若您遇到付款異常、退款申請、課程內容或帳號問題，請直接提交客服單。我們會依類型與訂單資訊進行追蹤處理。",
+  supportHours: "週一至週五 10:00 - 18:00",
+  supportGuidelines:
+    "付款問題：請附上付款方式、時間與錯誤訊息。\n退款申請：請務必填寫訂單編號，方便客服核對。\n課程問題：請描述章節、影片或內容異常的具體情況。",
+  refundSummary:
+    "本平台販售之商品為數位課程。付款成功後系統會立即開通課程，因此退款申請將採人工審核。",
+  purchaseGuideSummary:
+    "購買流程為：課程頁確認資訊、登入後結帳、完成付款、課程立即開通。",
+};
 
 function mapSupportTicket(row: SupportTicketRow): SupportTicket {
   return {
@@ -346,6 +400,22 @@ function mapSupportTicket(row: SupportTicketRow): SupportTicket {
     userId: row.user_id ?? undefined,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+  };
+}
+
+function mapSiteSettingsRow(row: SiteSettingsRow): SiteSettingsRecord {
+  return {
+    id: row.id,
+    platformName: row.platform_name,
+    supportEmail: row.support_email,
+    footerNotice: row.footer_notice,
+    contactIntro: row.contact_intro,
+    supportHours: row.support_hours,
+    supportGuidelines: row.support_guidelines,
+    refundSummary: row.refund_summary,
+    purchaseGuideSummary: row.purchase_guide_summary,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -1003,6 +1073,103 @@ export async function getCourseByIdFromStore(courseId: string): Promise<Course |
   const modulesMap = await listCourseModules([row.id]);
   const priceLaddersMap = await listCoursePriceLadders([row.id]);
   return mapCourseRow(row, modulesMap.get(row.id) ?? [], priceLaddersMap.get(row.id) ?? []);
+}
+
+export async function getSiteSettingsFromStore(): Promise<SiteSettingsRecord> {
+  await ensureD1Seeded();
+
+  if (!isD1Configured()) {
+    return {
+      id: "default",
+      ...DEFAULT_SITE_SETTINGS,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    };
+  }
+
+  const now = nowIso();
+  await executeD1(
+    `INSERT OR IGNORE INTO site_settings (
+      id, platform_name, support_email, footer_notice, contact_intro, support_hours,
+      support_guidelines, refund_summary, purchase_guide_summary, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      "default",
+      DEFAULT_SITE_SETTINGS.platformName,
+      DEFAULT_SITE_SETTINGS.supportEmail,
+      DEFAULT_SITE_SETTINGS.footerNotice,
+      DEFAULT_SITE_SETTINGS.contactIntro,
+      DEFAULT_SITE_SETTINGS.supportHours,
+      DEFAULT_SITE_SETTINGS.supportGuidelines,
+      DEFAULT_SITE_SETTINGS.refundSummary,
+      DEFAULT_SITE_SETTINGS.purchaseGuideSummary,
+      now,
+      now,
+    ],
+  );
+
+  const row = await queryFirstD1<SiteSettingsRow>(
+    `SELECT * FROM site_settings WHERE id = ? LIMIT 1`,
+    ["default"],
+  );
+
+  if (!row) {
+    return {
+      id: "default",
+      ...DEFAULT_SITE_SETTINGS,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  return mapSiteSettingsRow(row);
+}
+
+export async function updateSiteSettingsInStore(
+  input: SiteSettingsInput,
+): Promise<SiteSettingsRecord> {
+  const now = nowIso();
+
+  if (!isD1Configured()) {
+    return {
+      id: "default",
+      ...input,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  await executeD1(
+    `INSERT INTO site_settings (
+      id, platform_name, support_email, footer_notice, contact_intro, support_hours,
+      support_guidelines, refund_summary, purchase_guide_summary, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      platform_name = excluded.platform_name,
+      support_email = excluded.support_email,
+      footer_notice = excluded.footer_notice,
+      contact_intro = excluded.contact_intro,
+      support_hours = excluded.support_hours,
+      support_guidelines = excluded.support_guidelines,
+      refund_summary = excluded.refund_summary,
+      purchase_guide_summary = excluded.purchase_guide_summary,
+      updated_at = excluded.updated_at`,
+    [
+      "default",
+      input.platformName,
+      input.supportEmail,
+      input.footerNotice,
+      input.contactIntro,
+      input.supportHours,
+      input.supportGuidelines,
+      input.refundSummary,
+      input.purchaseGuideSummary,
+      now,
+      now,
+    ],
+  );
+
+  return getSiteSettingsFromStore();
 }
 
 export interface OrderDraftItem {

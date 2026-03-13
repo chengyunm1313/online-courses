@@ -1,4 +1,5 @@
 import { createOrderEvent, hasOrderEvent } from "@/lib/d1-repository";
+import { getSiteSettings } from "@/lib/site-settings";
 
 interface GmailAccessTokenResponse {
   access_token: string;
@@ -58,14 +59,6 @@ function encodeMimeHeader(value: string): string {
   return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
 }
 
-function getBrandName(): string {
-  return "線上學院";
-}
-
-function getSupportEmail(): string {
-  return process.env.GMAIL_SENDER_EMAIL || "support@example.com";
-}
-
 function formatCurrency(value?: number): string {
   if (typeof value !== "number") {
     return "—";
@@ -89,6 +82,8 @@ function buildSummaryRows(
 }
 
 function buildEmailTemplate(input: {
+  brandName: string;
+  supportEmail: string;
   preheader: string;
   heading: string;
   description: string;
@@ -124,7 +119,7 @@ function buildEmailTemplate(input: {
                 <tr>
                   <td style="padding: 28px 32px; background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); border-bottom: 1px solid #e2e8f0;">
                     <div style="font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: ${colors.accent}; font-weight: 700;">
-                      ${escapeHtml(getBrandName())}
+                      ${escapeHtml(input.brandName)}
                     </div>
                     <div style="margin-top: 18px;">
                       <span style="display: inline-block; padding: 6px 12px; border-radius: 999px; background: ${colors.badgeBg}; color: ${colors.badgeText}; font-size: 12px; font-weight: 700;">
@@ -164,7 +159,7 @@ function buildEmailTemplate(input: {
                 </tr>
                 <tr>
                   <td style="padding: 20px 32px 28px; border-top: 1px solid #e2e8f0; font-size: 12px; line-height: 1.8; color: #94a3b8;">
-                    此信件由 ${escapeHtml(getBrandName())} 系統自動發送。若需協助，請聯絡 ${escapeHtml(getSupportEmail())}。
+                    此信件由 ${escapeHtml(input.brandName)} 系統自動發送。若需協助，請聯絡 ${escapeHtml(input.supportEmail)}。
                   </td>
                 </tr>
               </table>
@@ -187,7 +182,8 @@ async function sendEmail(input: {
   }
 
   const senderEmail = process.env.GMAIL_SENDER_EMAIL!;
-  const senderName = getBrandName();
+  const settings = await getSiteSettings();
+  const senderName = settings.platformName;
   const accessToken = await getGmailAccessToken();
   const lines = [
     `From: ${encodeMimeHeader(senderName)} <${senderEmail}>`,
@@ -256,10 +252,13 @@ export async function sendOrderCreatedEmail(input: {
   total: number;
 }) {
   try {
+    const settings = await getSiteSettings();
     const result = await sendEmail({
       to: input.to,
       subject: "訂單已建立",
       html: buildEmailTemplate({
+        brandName: settings.platformName,
+        supportEmail: settings.supportEmail,
         preheader: "您的訂單已建立，請依照付款方式完成付款。",
         heading: "訂單已建立",
         description: "我們已為您保留課程名額，請依照選擇的付款方式完成付款。",
@@ -296,10 +295,13 @@ export async function sendPaymentSuccessEmail(input: {
   total: number;
 }) {
   try {
+    const settings = await getSiteSettings();
     const result = await sendEmail({
       to: input.to,
       subject: "付款成功通知",
       html: buildEmailTemplate({
+        brandName: settings.platformName,
+        supportEmail: settings.supportEmail,
         preheader: "付款成功，課程即將加入您的學習清單。",
         heading: "付款成功",
         description: "我們已確認您的付款，課程將立即加入您的學習清單。",
@@ -337,10 +339,13 @@ export async function sendEnrollmentConfirmedEmail(input: {
   courseTitles: string[];
 }) {
   try {
+    const settings = await getSiteSettings();
     const result = await sendEmail({
       to: input.to,
       subject: "課程已開通",
       html: buildEmailTemplate({
+        brandName: settings.platformName,
+        supportEmail: settings.supportEmail,
         preheader: "課程已開通，現在就可以開始學習。",
         heading: "課程已開通",
         description: "您的購買內容已完成開通，現在就可以前往學習頁開始上課。",
@@ -385,10 +390,13 @@ export async function sendRefundRequestedEmail(input: {
   }
 
   try {
+    const settings = await getSiteSettings();
     const result = await sendEmail({
       to: input.to,
       subject: "已收到您的退款申請",
       html: buildEmailTemplate({
+        brandName: settings.platformName,
+        supportEmail: input.supportEmail || settings.supportEmail,
         preheader: "我們已收到您的退款申請，客服將盡快處理。",
         heading: "已收到退款申請",
         description: "我們已收到您的退款申請，客服將盡快為您處理。",
@@ -400,7 +408,7 @@ export async function sendRefundRequestedEmail(input: {
           { label: "退款狀態", value: "已申請" },
           { label: "退款原因", value: input.refundReason?.trim() || "未提供" },
         ],
-        helpText: `若有補充資料，請直接回覆此信或聯絡客服 ${input.supportEmail || getSupportEmail()}。`,
+        helpText: `若有補充資料，請直接回覆此信或聯絡客服 ${input.supportEmail || settings.supportEmail}。`,
       }),
     });
     await recordNotificationResult({
@@ -433,10 +441,13 @@ export async function sendRefundCompletedEmail(input: {
   }
 
   try {
+    const settings = await getSiteSettings();
     const result = await sendEmail({
       to: input.to,
       subject: "退款已完成通知",
       html: buildEmailTemplate({
+        brandName: settings.platformName,
+        supportEmail: input.supportEmail || settings.supportEmail,
         preheader: "您的退款已完成，請留意銀行或付款通路入帳時間。",
         heading: "退款已完成",
         description: "您的退款已完成，若款項尚未入帳，請留意發卡銀行或付款通路的實際作業時間。",
@@ -448,7 +459,7 @@ export async function sendRefundCompletedEmail(input: {
           { label: "退款狀態", value: "已退款" },
           { label: "退款原因", value: input.refundReason?.trim() || "未提供" },
         ],
-        helpText: `若超過預期時間仍未收到退款，請聯絡客服 ${input.supportEmail || getSupportEmail()}。`,
+        helpText: `若超過預期時間仍未收到退款，請聯絡客服 ${input.supportEmail || settings.supportEmail}。`,
       }),
     });
     await recordNotificationResult({
@@ -475,10 +486,13 @@ export async function sendLeadMagnetEmail(input: {
   leadMagnetTitle?: string;
   leadMagnetDescription?: string;
 }) {
+  const settings = await getSiteSettings();
   return sendEmail({
     to: input.to,
     subject: input.leadMagnetTitle?.trim() || "您的課程優惠與開賣提醒",
     html: buildEmailTemplate({
+      brandName: settings.platformName,
+      supportEmail: settings.supportEmail,
       preheader: "已收到您的資料，我們先把本次課程優惠與提醒內容寄給您。",
       heading: input.leadMagnetTitle?.trim() || "已為您保留本次優惠資訊",
       description:
@@ -489,7 +503,7 @@ export async function sendLeadMagnetEmail(input: {
       summaryRows: [
         { label: "課程", value: input.courseTitle },
         { label: "優惠碼", value: input.couponCode?.trim() || "將於開賣時另外通知" },
-        { label: "客服信箱", value: getSupportEmail() },
+        { label: "客服信箱", value: settings.supportEmail },
       ],
       helpText: "若您暫時還在比較課程內容，建議先保留此信件，之後可直接回到網站完成報名。",
       ctaLabel: "回到課程頁",
@@ -513,10 +527,14 @@ export async function sendWaitlistConfirmationEmail(input: {
       })
     : "開賣時間確認後將另行通知";
 
+  const settings = await getSiteSettings();
+
   return sendEmail({
     to: input.to,
     subject: "您已加入課程等待名單",
     html: buildEmailTemplate({
+      brandName: settings.platformName,
+      supportEmail: settings.supportEmail,
       preheader: "我們已收到您的等待名單申請，開賣時會優先通知您。",
       heading: "已加入等待名單",
       description: "課程尚未開賣或本期已結束，我們會在下一波開賣時優先通知您。",
@@ -525,7 +543,7 @@ export async function sendWaitlistConfirmationEmail(input: {
       summaryRows: [
         { label: "課程", value: input.courseTitle },
         { label: "開賣通知", value: launchLabel },
-        { label: "客服信箱", value: getSupportEmail() },
+        { label: "客服信箱", value: settings.supportEmail },
       ],
       helpText: "若您對課程內容、付款方式或退款政策有疑問，可直接回覆此信與我們聯繫。",
       ctaLabel: "瀏覽更多課程",

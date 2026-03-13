@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import { listCoursesForManagement } from "@/lib/admin-data";
 import CourseList from "@/components/admin/CourseList";
@@ -23,10 +22,7 @@ export default async function AdminCoursesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">課程管理</h1>
@@ -49,6 +45,5 @@ export default async function AdminCoursesPage() {
           canDelete
         />
       </div>
-    </div>
   );
 }

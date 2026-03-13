@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import { getAdminActivityFeed } from "@/lib/admin-data";
 
@@ -35,10 +34,7 @@ export default async function AdminActivityPage() {
   const activities = await getAdminActivityFeed(40);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <div className="max-w-5xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-5xl mx-auto space-y-8">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-gray-900">活動紀錄</h1>
           <p className="text-sm text-gray-600">
@@ -83,6 +79,5 @@ export default async function AdminActivityPage() {
           )}
         </div>
       </div>
-    </div>
   );
 }

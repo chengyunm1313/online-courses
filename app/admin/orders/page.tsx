@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Order, OrderStatus, OrderStats } from "@/types/order";
-import Navbar from "@/components/Navbar";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -94,10 +93,7 @@ export default function AdminOrdersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-950">訂單管理</h1>
@@ -306,8 +302,6 @@ export default function AdminOrdersPage() {
             </table>
           </div>
         </div>
-        </div>
-      </div>
     </div>
   );
 }
