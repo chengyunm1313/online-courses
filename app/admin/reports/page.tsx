@@ -105,6 +105,18 @@ export default async function AdminReportsPage() {
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Lead 提交</p>
+                  <p className="mt-1 text-2xl font-bold text-slate-950">
+                    {formatNumber(report.funnel.leadSubmitted)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Waitlist 加入</p>
+                  <p className="mt-1 text-2xl font-bold text-slate-950">
+                    {formatNumber(report.funnel.waitlistJoined)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">開始結帳</p>
                   <p className="mt-1 text-2xl font-bold text-slate-950">
                     {formatNumber(report.funnel.checkoutStarted)}
@@ -126,6 +138,9 @@ export default async function AdminReportsPage() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
                 <p>購買頁 → 開始結帳：{formatPercent(report.funnel.purchaseToCheckoutRate)}</p>
                 <p className="mt-1">開始結帳 → 付款成功：{formatPercent(report.funnel.checkoutToPaidRate)}</p>
+                <p className="mt-1">Coupon Popup 曝光：{formatNumber(report.funnel.couponPopupShown)}</p>
+                <p className="mt-1">Coupon Popup 兌換：{formatNumber(report.funnel.couponPopupClaimed)}</p>
+                <p className="mt-1">倒數區塊點擊：{formatNumber(report.funnel.countdownClicked)}</p>
               </div>
             </div>
           </div>

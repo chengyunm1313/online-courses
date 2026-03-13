@@ -27,6 +27,20 @@ export interface Course {
   modules: CourseModule[];
   tags: string[];
   status: 'draft' | 'published' | 'archived';
+  originalPrice?: number;
+  salesMode: 'evergreen' | 'launch';
+  salesStatus: 'draft' | 'waitlist' | 'selling' | 'closed';
+  launchStartsAt?: string;
+  launchEndsAt?: string;
+  showCountdown: boolean;
+  showSeats: boolean;
+  seatLimit?: number;
+  soldCountMode: 'paid_orders' | 'enrollments';
+  leadMagnetEnabled: boolean;
+  leadMagnetTitle?: string;
+  leadMagnetDescription?: string;
+  leadMagnetCouponCode?: string;
+  priceLadders: CoursePriceLadder[];
   targetAudience: string[];
   learningOutcomes: string[];
   faq: CourseFaqItem[];
@@ -46,6 +60,16 @@ export interface CourseFaqItem {
 export interface CourseSalesBlock {
   title: string;
   content: string;
+}
+
+export interface CoursePriceLadder {
+  id: string;
+  name: string;
+  price: number;
+  startsAt?: string;
+  endsAt?: string;
+  seatLimit?: number;
+  sortOrder: number;
 }
 
 export interface CourseSyllabus {
@@ -121,4 +145,20 @@ export interface CourseFilters {
   priceMax?: number;
   rating?: number;
   search?: string;
+}
+
+export interface ResolvedCourseOffer {
+  currentPrice: number;
+  originalPrice: number;
+  discountLabel?: string;
+  nextPrice?: number;
+  nextTierName?: string;
+  nextTransitionAt?: string;
+  activeTierName?: string;
+  countdownEndsAt?: string;
+  soldCount: number;
+  remainingSeats?: number;
+  canPurchase: boolean;
+  requiresWaitlist: boolean;
+  salesStatusLabel: string;
 }

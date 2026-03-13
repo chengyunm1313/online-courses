@@ -9,6 +9,7 @@ import {
   getECPayConfig,
   prepareECPayParams,
 } from "@/lib/ecpay";
+import { resolveCourseOffer } from "@/lib/course-sales";
 import { getPublishedCourseById } from "@/lib/public-courses";
 import { sendOrderCreatedEmail } from "@/lib/notifications";
 import { sanitizeLogContext } from "@/lib/logging";
@@ -48,7 +49,16 @@ export async function POST(request: NextRequest) {
     }
 
     const resolvedCourses = courses.filter((course): course is NonNullable<typeof course> => Boolean(course));
-    const subtotal = resolvedCourses.reduce((sum, course) => sum + course.price, 0);
+    const resolvedOffers = resolvedCourses.map((course) => ({
+      course,
+      offer: resolveCourseOffer(course),
+    }));
+
+    if (resolvedOffers.some((item) => !item.offer.canPurchase)) {
+      return NextResponse.json({ error: "目前課程尚未開賣或已結束販售" }, { status: 400 });
+    }
+
+    const subtotal = resolvedOffers.reduce((sum, item) => sum + item.offer.currentPrice, 0);
     const discount = await evaluateDiscount({
       originalPrice: subtotal,
       rawCode: body.discountCode,
@@ -67,12 +77,12 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
       userName: session.user.name ?? "",
       userEmail: session.user.email ?? "",
-      items: resolvedCourses.map((course) => ({
+      items: resolvedOffers.map(({ course, offer }) => ({
         courseId: course.id,
         courseTitle: course.title,
         courseThumbnail: course.thumbnail,
         instructor: course.instructor.name,
-        price: course.price,
+        price: offer.currentPrice,
       })),
       subtotal,
       discountAmount,

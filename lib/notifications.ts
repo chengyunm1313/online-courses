@@ -467,3 +467,69 @@ export async function sendRefundCompletedEmail(input: {
     });
   }
 }
+
+export async function sendLeadMagnetEmail(input: {
+  to: string;
+  courseTitle: string;
+  couponCode?: string;
+  leadMagnetTitle?: string;
+  leadMagnetDescription?: string;
+}) {
+  return sendEmail({
+    to: input.to,
+    subject: input.leadMagnetTitle?.trim() || "您的課程優惠與開賣提醒",
+    html: buildEmailTemplate({
+      preheader: "已收到您的資料，我們先把本次課程優惠與提醒內容寄給您。",
+      heading: input.leadMagnetTitle?.trim() || "已為您保留本次優惠資訊",
+      description:
+        input.leadMagnetDescription?.trim() ||
+        "感謝您留下聯絡方式，我們已為您保留本次優惠與後續開賣提醒。",
+      badgeText: input.couponCode ? "限時優惠" : "已加入名單",
+      theme: "neutral",
+      summaryRows: [
+        { label: "課程", value: input.courseTitle },
+        { label: "優惠碼", value: input.couponCode?.trim() || "將於開賣時另外通知" },
+        { label: "客服信箱", value: getSupportEmail() },
+      ],
+      helpText: "若您暫時還在比較課程內容，建議先保留此信件，之後可直接回到網站完成報名。",
+      ctaLabel: "回到課程頁",
+      ctaHref: `${process.env.APP_BASE_URL || "http://localhost:3000"}/courses`,
+    }),
+  });
+}
+
+export async function sendWaitlistConfirmationEmail(input: {
+  to: string;
+  courseTitle: string;
+  launchStartsAt?: string;
+}) {
+  const launchLabel = input.launchStartsAt
+    ? new Date(input.launchStartsAt).toLocaleString("zh-TW", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "開賣時間確認後將另行通知";
+
+  return sendEmail({
+    to: input.to,
+    subject: "您已加入課程等待名單",
+    html: buildEmailTemplate({
+      preheader: "我們已收到您的等待名單申請，開賣時會優先通知您。",
+      heading: "已加入等待名單",
+      description: "課程尚未開賣或本期已結束，我們會在下一波開賣時優先通知您。",
+      badgeText: "等待名單",
+      theme: "warning",
+      summaryRows: [
+        { label: "課程", value: input.courseTitle },
+        { label: "開賣通知", value: launchLabel },
+        { label: "客服信箱", value: getSupportEmail() },
+      ],
+      helpText: "若您對課程內容、付款方式或退款政策有疑問，可直接回覆此信與我們聯繫。",
+      ctaLabel: "瀏覽更多課程",
+      ctaHref: `${process.env.APP_BASE_URL || "http://localhost:3000"}/courses`,
+    }),
+  });
+}

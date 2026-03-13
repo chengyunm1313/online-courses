@@ -9,10 +9,12 @@ import { getPublishedCourseById } from "@/lib/public-courses";
 import VideoEmbed from "@/components/VideoEmbed";
 import EnrollButton from "./EnrollButton";
 export const dynamic = "force-dynamic";
+import SalesLeadCapture from "@/components/courses/SalesLeadCapture";
 import {
   getEnrollmentStatusForUser,
   touchEnrollmentLastAccessed,
 } from "@/lib/enrollments";
+import { resolveCourseOffer } from "@/lib/course-sales";
 
 const SECTION_CONFIG = [
   { id: "overview", label: "總覽" },
@@ -121,6 +123,7 @@ export default async function CourseDetailPage({
   }
 
   const session = await getServerSession(authOptions);
+  const offer = resolveCourseOffer(course);
 
   const modules = (course.modules.length > 0
     ? course.modules
@@ -322,21 +325,44 @@ export default async function CourseDetailPage({
             <aside className="space-y-6">
               <div className="rounded-lg bg-white p-6 text-gray-900 shadow-sm">
                 <div className="text-center">
+                  {offer.originalPrice > offer.currentPrice ? (
+                    <p className="text-sm text-gray-400 line-through">
+                      NT$ {offer.originalPrice.toLocaleString()}
+                    </p>
+                  ) : null}
                   <p className="text-3xl font-bold">
-                    NT$ {course.price.toLocaleString()}
+                    NT$ {offer.currentPrice.toLocaleString()}
                   </p>
+                  {offer.discountLabel ? (
+                    <p className="mt-2 text-sm font-semibold text-emerald-600">
+                      {offer.discountLabel}
+                    </p>
+                  ) : null}
                   <p className="mt-2 text-xs text-gray-500">
-                    包含所有章節，終身不限次數觀看
+                    {offer.salesStatusLabel}，包含所有章節，終身不限次數觀看
                   </p>
                 </div>
 
                 <div className="mt-6">
-                  <EnrollButton
-                    courseId={course.id}
-                    isLoggedIn={!!session}
-                    isEnrolled={isEnrolled}
-                    nextLessonId={nextLessonId}
-                  />
+                  {offer.canPurchase ? (
+                    <EnrollButton
+                      courseId={course.id}
+                      isLoggedIn={!!session}
+                      isEnrolled={isEnrolled}
+                      nextLessonId={nextLessonId}
+                    />
+                  ) : (
+                    <SalesLeadCapture
+                      mode="waitlist"
+                      courseId={course.id}
+                      courseTitle={course.title}
+                      title={offer.requiresWaitlist ? "先加入等待名單" : "目前尚未開放購買"}
+                      description="留下 Email 後，下一波開賣、加開名額或價格調整時會優先通知您。"
+                      launchStartsAt={course.launchStartsAt}
+                      source="course_page_waitlist"
+                      compact
+                    />
+                  )}
                 </div>
 
                 <ul className="mt-6 space-y-2 text-sm text-gray-600">
@@ -344,6 +370,12 @@ export default async function CourseDetailPage({
                   <li>• 完課證書與學習紀錄</li>
                   <li>• 支援手機與桌面裝置</li>
                   <li>• 提供章節練習檔與模板</li>
+                  {offer.nextPrice && offer.nextTierName ? (
+                    <li>• 下一階 {offer.nextTierName}：NT$ {offer.nextPrice.toLocaleString()}</li>
+                  ) : null}
+                  {typeof offer.remainingSeats === "number" ? (
+                    <li>• 剩餘名額：{offer.remainingSeats.toLocaleString()}</li>
+                  ) : null}
                 </ul>
 
                 {course.tags.length > 0 ? (
@@ -364,6 +396,22 @@ export default async function CourseDetailPage({
                   </div>
                 ) : null}
               </div>
+
+              {course.leadMagnetEnabled ? (
+                <SalesLeadCapture
+                  mode="lead"
+                  courseId={course.id}
+                  courseTitle={course.title}
+                  title={course.leadMagnetTitle || "先索取優惠與開賣提醒"}
+                  description={
+                    course.leadMagnetDescription ||
+                    "如果您還在比較課程內容，可先留下 Email，我們會寄送優惠碼與後續提醒。"
+                  }
+                  couponCode={course.leadMagnetCouponCode}
+                  source="course_page"
+                  compact
+                />
+              ) : null}
             </aside>
           </div>
         </div>
@@ -625,8 +673,13 @@ export default async function CourseDetailPage({
                 <p className="mt-2 text-sm text-gray-600">
                   立即解鎖全部章節，提供終身觀看與更新。
                 </p>
-                <p className="mt-4 text-3xl font-bold text-gray-900">
-                  NT$ {course.price.toLocaleString()}
+                {offer.originalPrice > offer.currentPrice ? (
+                  <p className="mt-4 text-sm text-gray-400 line-through">
+                    NT$ {offer.originalPrice.toLocaleString()}
+                  </p>
+                ) : null}
+                <p className="text-3xl font-bold text-gray-900">
+                  NT$ {offer.currentPrice.toLocaleString()}
                 </p>
                 <ul className="mt-4 space-y-2 text-sm text-gray-600">
                   <li>• 完整課程內容與練習檔</li>
@@ -634,12 +687,25 @@ export default async function CourseDetailPage({
                   <li>• 常見問題與問答支援</li>
                 </ul>
                 <div className="mt-6">
-                  <EnrollButton
-                    courseId={course.id}
-                    isLoggedIn={!!session}
-                    isEnrolled={isEnrolled}
-                    nextLessonId={nextLessonId}
-                  />
+                  {offer.canPurchase ? (
+                    <EnrollButton
+                      courseId={course.id}
+                      isLoggedIn={!!session}
+                      isEnrolled={isEnrolled}
+                      nextLessonId={nextLessonId}
+                    />
+                  ) : (
+                    <SalesLeadCapture
+                      mode="waitlist"
+                      courseId={course.id}
+                      courseTitle={course.title}
+                      title="改先加入等待名單"
+                      description="目前不開放直接付款，留下 Email 後會在下一波開賣時優先通知。"
+                      launchStartsAt={course.launchStartsAt}
+                      source="plans_waitlist"
+                      compact
+                    />
+                  )}
                 </div>
               </div>
 

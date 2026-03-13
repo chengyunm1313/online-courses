@@ -1,4 +1,4 @@
-import type { CourseModule } from "@/types/course";
+import type { CourseModule, CoursePriceLadder } from "@/types/course";
 import {
   getCheckoutFunnelMetrics,
   createDiscountRecord,
@@ -57,6 +57,20 @@ export interface AdminCourseDetail extends AdminCourseSummary {
   salesBlocks: { title: string; content: string }[];
   seoTitle?: string;
   seoDescription?: string;
+  originalPrice?: number;
+  salesMode: "evergreen" | "launch";
+  salesStatus: "draft" | "waitlist" | "selling" | "closed";
+  launchStartsAt?: string;
+  launchEndsAt?: string;
+  showCountdown: boolean;
+  showSeats: boolean;
+  seatLimit?: number;
+  soldCountMode: "paid_orders" | "enrollments";
+  leadMagnetEnabled: boolean;
+  leadMagnetTitle?: string;
+  leadMagnetDescription?: string;
+  leadMagnetCouponCode?: string;
+  priceLadders: CoursePriceLadder[];
 }
 
 export interface AdminCourseLesson {
@@ -123,6 +137,20 @@ export interface AdminCourseInput {
   salesBlocks?: { title: string; content: string }[];
   seoTitle?: string;
   seoDescription?: string;
+  originalPrice?: number;
+  salesMode?: "evergreen" | "launch";
+  salesStatus?: "draft" | "waitlist" | "selling" | "closed";
+  launchStartsAt?: string;
+  launchEndsAt?: string;
+  showCountdown?: boolean;
+  showSeats?: boolean;
+  seatLimit?: number;
+  soldCountMode?: "paid_orders" | "enrollments";
+  leadMagnetEnabled?: boolean;
+  leadMagnetTitle?: string;
+  leadMagnetDescription?: string;
+  leadMagnetCouponCode?: string;
+  priceLadders?: CoursePriceLadder[];
   modules?: AdminCourseModule[];
   syllabus?: AdminCourseLesson[];
 }
@@ -172,7 +200,12 @@ export interface AdminReportData {
   };
   funnel: {
     purchasePageViews: number;
+    leadSubmitted: number;
+    waitlistJoined: number;
     discountApplied: number;
+    couponPopupShown: number;
+    couponPopupClaimed: number;
+    countdownClicked: number;
     checkoutStarted: number;
     ordersCreated: number;
     paymentsSucceeded: number;
@@ -227,6 +260,7 @@ export function normalizeAdminCourseInput(body: Record<string, unknown>): AdminC
       : [];
   const faq = Array.isArray(body.faq) ? body.faq : [];
   const salesBlocks = Array.isArray(body.salesBlocks) ? body.salesBlocks : [];
+  const priceLadders = Array.isArray(body.priceLadders) ? body.priceLadders : [];
 
   return {
     title: String(body.title ?? "").trim(),
@@ -268,6 +302,66 @@ export function normalizeAdminCourseInput(body: Record<string, unknown>): AdminC
       .filter((item) => item.title && item.content),
     seoTitle: typeof body.seoTitle === "string" ? body.seoTitle.trim() : "",
     seoDescription: typeof body.seoDescription === "string" ? body.seoDescription.trim() : "",
+    originalPrice: Number(body.originalPrice ?? 0) || undefined,
+    salesMode: body.salesMode === "launch" ? "launch" : "evergreen",
+    salesStatus:
+      body.salesStatus === "waitlist" ||
+      body.salesStatus === "selling" ||
+      body.salesStatus === "closed" ||
+      body.salesStatus === "draft"
+        ? body.salesStatus
+        : Boolean(body.published)
+          ? "selling"
+          : "draft",
+    launchStartsAt: typeof body.launchStartsAt === "string" ? body.launchStartsAt : "",
+    launchEndsAt: typeof body.launchEndsAt === "string" ? body.launchEndsAt : "",
+    showCountdown: body.showCountdown === true,
+    showSeats: body.showSeats === true,
+    seatLimit: Number(body.seatLimit ?? 0) || undefined,
+    soldCountMode: body.soldCountMode === "paid_orders" ? "paid_orders" : "enrollments",
+    leadMagnetEnabled: body.leadMagnetEnabled === true,
+    leadMagnetTitle:
+      typeof body.leadMagnetTitle === "string" ? body.leadMagnetTitle.trim() : "",
+    leadMagnetDescription:
+      typeof body.leadMagnetDescription === "string"
+        ? body.leadMagnetDescription.trim()
+        : "",
+    leadMagnetCouponCode:
+      typeof body.leadMagnetCouponCode === "string"
+        ? body.leadMagnetCouponCode.trim().toUpperCase()
+        : "",
+    priceLadders: priceLadders
+      .map((item, index) => ({
+        id:
+          typeof item === "object" && item && "id" in item
+            ? String(item.id || "").trim()
+            : "",
+        name:
+          typeof item === "object" && item && "name" in item
+            ? String(item.name || "").trim()
+            : "",
+        price:
+          typeof item === "object" && item && "price" in item
+            ? Number(item.price ?? 0) || 0
+            : 0,
+        startsAt:
+          typeof item === "object" && item && "startsAt" in item && typeof item.startsAt === "string"
+            ? item.startsAt
+            : undefined,
+        endsAt:
+          typeof item === "object" && item && "endsAt" in item && typeof item.endsAt === "string"
+            ? item.endsAt
+            : undefined,
+        seatLimit:
+          typeof item === "object" && item && "seatLimit" in item
+            ? Number(item.seatLimit ?? 0) || undefined
+            : undefined,
+        sortOrder:
+          typeof item === "object" && item && "sortOrder" in item
+            ? Number(item.sortOrder ?? index + 1) || index + 1
+            : index + 1,
+      }))
+      .filter((item) => item.name && item.price > 0),
     modules,
     syllabus,
   };
@@ -403,6 +497,20 @@ function mapCourseDetail(
     salesBlocks: course.salesBlocks,
     seoTitle: course.seoTitle,
     seoDescription: course.seoDescription,
+    originalPrice: course.originalPrice,
+    salesMode: course.salesMode,
+    salesStatus: course.salesStatus,
+    launchStartsAt: course.launchStartsAt,
+    launchEndsAt: course.launchEndsAt,
+    showCountdown: course.showCountdown,
+    showSeats: course.showSeats,
+    seatLimit: course.seatLimit,
+    soldCountMode: course.soldCountMode,
+    leadMagnetEnabled: course.leadMagnetEnabled,
+    leadMagnetTitle: course.leadMagnetTitle,
+    leadMagnetDescription: course.leadMagnetDescription,
+    leadMagnetCouponCode: course.leadMagnetCouponCode,
+    priceLadders: course.priceLadders,
   };
 }
 
@@ -533,6 +641,20 @@ export async function createCourseForManagement(
     salesBlocks: input.salesBlocks ?? [],
     seoTitle: input.seoTitle?.trim() || undefined,
     seoDescription: input.seoDescription?.trim() || undefined,
+    originalPrice: Number(input.originalPrice ?? input.price ?? 0) || undefined,
+    salesMode: input.salesMode ?? "evergreen",
+    salesStatus: input.salesStatus ?? (input.published ? "selling" : "draft"),
+    launchStartsAt: input.launchStartsAt || undefined,
+    launchEndsAt: input.launchEndsAt || undefined,
+    showCountdown: Boolean(input.showCountdown),
+    showSeats: Boolean(input.showSeats),
+    seatLimit: input.seatLimit,
+    soldCountMode: input.soldCountMode ?? "enrollments",
+    leadMagnetEnabled: Boolean(input.leadMagnetEnabled),
+    leadMagnetTitle: input.leadMagnetTitle?.trim() || undefined,
+    leadMagnetDescription: input.leadMagnetDescription?.trim() || undefined,
+    leadMagnetCouponCode: input.leadMagnetCouponCode?.trim().toUpperCase() || undefined,
+    priceLadders: input.priceLadders ?? [],
     modules,
   });
 
@@ -595,6 +717,25 @@ export async function updateCourseForManagement(
     salesBlocks: input.salesBlocks ?? existing.salesBlocks,
     seoTitle: input.seoTitle?.trim() || existing.seoTitle,
     seoDescription: input.seoDescription?.trim() || existing.seoDescription,
+    originalPrice: Number(input.originalPrice ?? existing.originalPrice ?? input.price ?? existing.price) || undefined,
+    salesMode: input.salesMode ?? existing.salesMode,
+    salesStatus: input.salesStatus ?? existing.salesStatus,
+    launchStartsAt: input.launchStartsAt || existing.launchStartsAt,
+    launchEndsAt: input.launchEndsAt || existing.launchEndsAt,
+    showCountdown: typeof input.showCountdown === "boolean" ? input.showCountdown : existing.showCountdown,
+    showSeats: typeof input.showSeats === "boolean" ? input.showSeats : existing.showSeats,
+    seatLimit: input.seatLimit ?? existing.seatLimit,
+    soldCountMode: input.soldCountMode ?? existing.soldCountMode,
+    leadMagnetEnabled:
+      typeof input.leadMagnetEnabled === "boolean"
+        ? input.leadMagnetEnabled
+        : existing.leadMagnetEnabled,
+    leadMagnetTitle: input.leadMagnetTitle?.trim() || existing.leadMagnetTitle,
+    leadMagnetDescription:
+      input.leadMagnetDescription?.trim() || existing.leadMagnetDescription,
+    leadMagnetCouponCode:
+      input.leadMagnetCouponCode?.trim().toUpperCase() || existing.leadMagnetCouponCode,
+    priceLadders: input.priceLadders ?? existing.priceLadders,
     modules,
   });
 

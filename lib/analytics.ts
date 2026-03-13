@@ -3,7 +3,12 @@
 interface TrackCheckoutEventInput {
   eventName:
     | "purchase_page_view"
+    | "lead_submitted"
+    | "waitlist_joined"
     | "discount_applied"
+    | "coupon_popup_shown"
+    | "coupon_popup_claimed"
+    | "countdown_clicked"
     | "checkout_started";
   courseId?: string;
   orderId?: string;

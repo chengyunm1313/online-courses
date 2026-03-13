@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import { authOptions } from "@/lib/auth";
 import { getPublishedCourseById } from "@/lib/public-courses";
 import PurchaseClient from "@/components/checkout/PurchaseClient";
+import { resolveCourseOffer } from "@/lib/course-sales";
 
 export default async function PurchasePage({
   params,
@@ -23,17 +24,38 @@ export default async function PurchasePage({
     redirect("/courses");
   }
 
+  const offer = resolveCourseOffer(course);
+
   const serializedCourse = {
     id: course.id,
     title: course.title,
     description: course.description,
     price: course.price,
+    originalPrice: offer.originalPrice,
+    currentPrice: offer.currentPrice,
+    discountLabel: offer.discountLabel,
+    nextPrice: offer.nextPrice,
+    nextTierName: offer.nextTierName,
+    nextTransitionAt: offer.nextTransitionAt,
+    countdownEndsAt: offer.countdownEndsAt,
+    canPurchase: offer.canPurchase,
+    requiresWaitlist: offer.requiresWaitlist,
+    salesStatusLabel: offer.salesStatusLabel,
+    soldCount: offer.soldCount,
+    remainingSeats: offer.remainingSeats,
     category: course.category,
     level: course.level,
     thumbnail: course.thumbnail,
     instructorName: course.instructor.name,
     lessons: course.lessons,
     duration: course.duration,
+    salesMode: course.salesMode,
+    salesStatus: course.salesStatus,
+    launchStartsAt: course.launchStartsAt,
+    leadMagnetEnabled: course.leadMagnetEnabled,
+    leadMagnetTitle: course.leadMagnetTitle,
+    leadMagnetDescription: course.leadMagnetDescription,
+    leadMagnetCouponCode: course.leadMagnetCouponCode,
   };
 
   return (

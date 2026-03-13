@@ -37,6 +37,28 @@ export interface CourseFormInitialValues {
   }[];
   seoTitle?: string;
   seoDescription?: string;
+  originalPrice?: number;
+  salesMode?: "evergreen" | "launch";
+  salesStatus?: "draft" | "waitlist" | "selling" | "closed";
+  launchStartsAt?: string;
+  launchEndsAt?: string;
+  showCountdown?: boolean;
+  showSeats?: boolean;
+  seatLimit?: number;
+  soldCountMode?: "paid_orders" | "enrollments";
+  leadMagnetEnabled?: boolean;
+  leadMagnetTitle?: string;
+  leadMagnetDescription?: string;
+  leadMagnetCouponCode?: string;
+  priceLadders?: {
+    id: string;
+    name: string;
+    price: number;
+    startsAt?: string;
+    endsAt?: string;
+    seatLimit?: number;
+    sortOrder: number;
+  }[];
   syllabus?: {
     id: string;
     title: string;
@@ -123,6 +145,36 @@ const STATUS_OPTIONS = [
   { value: "published", label: "已上架" },
   { value: "archived", label: "已封存" },
 ];
+
+const SALES_MODE_OPTIONS = [
+  { value: "evergreen", label: "常態販售" },
+  { value: "launch", label: "限時開賣" },
+];
+
+const SALES_STATUS_OPTIONS = [
+  { value: "draft", label: "尚未公開" },
+  { value: "waitlist", label: "收集名單" },
+  { value: "selling", label: "販售中" },
+  { value: "closed", label: "本期結束" },
+];
+
+const SOLD_COUNT_MODE_OPTIONS = [
+  { value: "enrollments", label: "已註冊人數" },
+  { value: "paid_orders", label: "已付款訂單數" },
+];
+
+function toDateTimeLocalValue(value?: string) {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const offset = date.getTimezoneOffset();
+  const localDate = new Date(date.getTime() - offset * 60_000);
+  return localDate.toISOString().slice(0, 16);
+}
 
 const createLessonForm = (lesson?: Partial<LessonForm>): LessonForm => ({
   id: lesson?.id || `lesson-${generateId()}`,
@@ -224,6 +276,34 @@ export default function CourseForm({
         "",
       seoTitle: initialValues?.seoTitle ?? "",
       seoDescription: initialValues?.seoDescription ?? "",
+      originalPrice: initialValues?.originalPrice ?? initialValues?.price ?? 0,
+      salesMode: initialValues?.salesMode ?? "evergreen",
+      salesStatus: initialValues?.salesStatus ?? (initialValues?.published ? "selling" : "draft"),
+      launchStartsAt: toDateTimeLocalValue(initialValues?.launchStartsAt),
+      launchEndsAt: toDateTimeLocalValue(initialValues?.launchEndsAt),
+      showCountdown: Boolean(initialValues?.showCountdown),
+      showSeats: Boolean(initialValues?.showSeats),
+      seatLimit: initialValues?.seatLimit ?? 0,
+      soldCountMode: initialValues?.soldCountMode ?? "enrollments",
+      leadMagnetEnabled: Boolean(initialValues?.leadMagnetEnabled),
+      leadMagnetTitle: initialValues?.leadMagnetTitle ?? "",
+      leadMagnetDescription: initialValues?.leadMagnetDescription ?? "",
+      leadMagnetCouponCode: initialValues?.leadMagnetCouponCode ?? "",
+      priceLadders:
+        initialValues?.priceLadders
+          ?.slice()
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map(
+            (item) =>
+              [
+                item.name,
+                item.price,
+                toDateTimeLocalValue(item.startsAt),
+                toDateTimeLocalValue(item.endsAt),
+                item.seatLimit ?? "",
+              ].join(" | "),
+          )
+          .join("\n") ?? "",
       modules: baseModules ?? syllabusFallback,
     };
   }, [initialValues, instructors]);
@@ -252,6 +332,32 @@ export default function CourseForm({
   const [salesBlocks, setSalesBlocks] = useState(defaultValues.salesBlocks);
   const [seoTitle, setSeoTitle] = useState(defaultValues.seoTitle);
   const [seoDescription, setSeoDescription] = useState(defaultValues.seoDescription);
+  const [originalPrice, setOriginalPrice] = useState(String(defaultValues.originalPrice || ""));
+  const [salesMode, setSalesMode] = useState<"evergreen" | "launch">(
+    defaultValues.salesMode as "evergreen" | "launch"
+  );
+  const [salesStatus, setSalesStatus] = useState<"draft" | "waitlist" | "selling" | "closed">(
+    defaultValues.salesStatus as "draft" | "waitlist" | "selling" | "closed"
+  );
+  const [launchStartsAt, setLaunchStartsAt] = useState(defaultValues.launchStartsAt);
+  const [launchEndsAt, setLaunchEndsAt] = useState(defaultValues.launchEndsAt);
+  const [showCountdown, setShowCountdown] = useState(Boolean(defaultValues.showCountdown));
+  const [showSeats, setShowSeats] = useState(Boolean(defaultValues.showSeats));
+  const [seatLimit, setSeatLimit] = useState(String(defaultValues.seatLimit || ""));
+  const [soldCountMode, setSoldCountMode] = useState<"paid_orders" | "enrollments">(
+    defaultValues.soldCountMode as "paid_orders" | "enrollments"
+  );
+  const [leadMagnetEnabled, setLeadMagnetEnabled] = useState(
+    Boolean(defaultValues.leadMagnetEnabled)
+  );
+  const [leadMagnetTitle, setLeadMagnetTitle] = useState(defaultValues.leadMagnetTitle);
+  const [leadMagnetDescription, setLeadMagnetDescription] = useState(
+    defaultValues.leadMagnetDescription
+  );
+  const [leadMagnetCouponCode, setLeadMagnetCouponCode] = useState(
+    defaultValues.leadMagnetCouponCode
+  );
+  const [priceLadders, setPriceLadders] = useState(defaultValues.priceLadders);
   const [modules, setModules] = useState<ModuleForm[]>(defaultValues.modules);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -409,6 +515,25 @@ export default function CourseForm({
         };
       })
       .filter((item) => item.title && item.content);
+    const normalizedPriceLadders = priceLadders
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line, index) => {
+        const [name, priceValue, startsAtValue, endsAtValue, seatLimitValue] = line
+          .split("|")
+          .map((item) => item.trim());
+        return {
+          id: `ladder-${index + 1}`,
+          name,
+          price: Number(priceValue ?? 0) || 0,
+          startsAt: startsAtValue || undefined,
+          endsAt: endsAtValue || undefined,
+          seatLimit: Number(seatLimitValue ?? 0) || undefined,
+          sortOrder: index + 1,
+        };
+      })
+      .filter((item) => item.name && item.price > 0);
 
     const totalLessons = flattenedSyllabus.length;
     const totalMinutes = flattenedSyllabus.reduce(
@@ -447,6 +572,20 @@ export default function CourseForm({
       salesBlocks: normalizedSalesBlocks,
       seoTitle: seoTitle.trim() || undefined,
       seoDescription: seoDescription.trim() || undefined,
+      originalPrice: Number(originalPrice) || Number(price) || 0,
+      salesMode,
+      salesStatus,
+      launchStartsAt: launchStartsAt || undefined,
+      launchEndsAt: launchEndsAt || undefined,
+      showCountdown,
+      showSeats,
+      seatLimit: Number(seatLimit) || undefined,
+      soldCountMode,
+      leadMagnetEnabled,
+      leadMagnetTitle: leadMagnetTitle.trim() || undefined,
+      leadMagnetDescription: leadMagnetDescription.trim() || undefined,
+      leadMagnetCouponCode: leadMagnetCouponCode.trim().toUpperCase() || undefined,
+      priceLadders: normalizedPriceLadders,
       modules: sanitizedModules,
       syllabus: flattenedSyllabus.map((lesson, index) => ({
         id: lesson.id,
@@ -717,6 +856,192 @@ export default function CourseForm({
           />
         </div>
       </div>
+
+      <section className="space-y-4 rounded-xl border border-blue-100 bg-blue-50/40 p-5">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-gray-900">販售設定</h2>
+          <p className="text-sm text-gray-600">
+            可設定常態販售、等待名單、限時開賣與價格階梯，支援前台倒數與 lead magnet。
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-800">販售模式</label>
+            <select
+              value={salesMode}
+              onChange={(event) => setSalesMode(event.target.value as "evergreen" | "launch")}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {SALES_MODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-800">販售狀態</label>
+            <select
+              value={salesStatus}
+              onChange={(event) =>
+                setSalesStatus(
+                  event.target.value as "draft" | "waitlist" | "selling" | "closed"
+                )
+              }
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {SALES_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-800">原價（顯示刪除線）</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={originalPrice}
+              onChange={(event) => setOriginalPrice(event.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例如：2980"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-800">售出數基準</label>
+            <select
+              value={soldCountMode}
+              onChange={(event) =>
+                setSoldCountMode(event.target.value as "paid_orders" | "enrollments")
+              }
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {SOLD_COUNT_MODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-800">開賣時間</label>
+            <input
+              type="datetime-local"
+              value={launchStartsAt}
+              onChange={(event) => setLaunchStartsAt(event.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-800">結束時間</label>
+            <input
+              type="datetime-local"
+              value={launchEndsAt}
+              onChange={(event) => setLaunchEndsAt(event.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-800">名額上限</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={seatLimit}
+              onChange={(event) => setSeatLimit(event.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例如：100"
+            />
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 md:justify-center">
+            <label className="flex items-center gap-3 text-sm font-semibold text-gray-800">
+              <input
+                type="checkbox"
+                checked={showCountdown}
+                onChange={(event) => setShowCountdown(event.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              顯示倒數計時
+            </label>
+            <label className="flex items-center gap-3 text-sm font-semibold text-gray-800">
+              <input
+                type="checkbox"
+                checked={showSeats}
+                onChange={(event) => setShowSeats(event.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              顯示剩餘名額
+            </label>
+            <label className="flex items-center gap-3 text-sm font-semibold text-gray-800">
+              <input
+                type="checkbox"
+                checked={leadMagnetEnabled}
+                onChange={(event) => setLeadMagnetEnabled(event.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              啟用 lead magnet
+            </label>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-800">Lead Magnet 標題</label>
+            <input
+              type="text"
+              value={leadMagnetTitle}
+              onChange={(event) => setLeadMagnetTitle(event.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例如：留下 Email 立即取得早鳥優惠"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-800">Lead Magnet 折扣碼</label>
+            <input
+              type="text"
+              value={leadMagnetCouponCode}
+              onChange={(event) => setLeadMagnetCouponCode(event.target.value.toUpperCase())}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="例如：EARLY100"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">Lead Magnet 說明</label>
+          <textarea
+            value={leadMagnetDescription}
+            onChange={(event) => setLeadMagnetDescription(event.target.value)}
+            rows={3}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="例如：留下 Email 可收到限時優惠與開賣通知。"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-800">價格階梯</label>
+          <textarea
+            value={priceLadders}
+            onChange={(event) => setPriceLadders(event.target.value)}
+            rows={5}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={"每行一階，格式：名稱 | 價格 | 開始時間 | 結束時間 | 名額上限\n例如：早鳥票 | 1680 | 2026-03-20T10:00 | 2026-03-27T23:59 | 50"}
+          />
+          <p className="text-xs text-gray-600">
+            只要填名稱與價格即可；日期與名額可留空。系統會依順序判定目前階梯與下一階價格。
+          </p>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-2">

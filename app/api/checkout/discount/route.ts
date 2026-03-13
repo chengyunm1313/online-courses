@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPublishedCourseById } from "@/lib/public-courses";
 import { evaluateDiscount } from "@/lib/checkout";
+import { resolveCourseOffer } from "@/lib/course-sales";
 
 export async function POST(request: Request) {
   try {
@@ -22,7 +23,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const originalPrice = course.price;
+    const offer = resolveCourseOffer(course);
+    const originalPrice = offer.currentPrice;
     const result = await evaluateDiscount({
       originalPrice,
       rawCode: code,

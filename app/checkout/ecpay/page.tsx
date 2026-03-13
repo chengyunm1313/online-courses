@@ -19,6 +19,7 @@ interface CheckoutFormData {
   items: CheckoutItem[];
   paymentMethod: 'CREDIT' | 'ATM';
   subtotal: number;
+  discountAmount?: number;
   tax: number;
   total: number;
   notes?: string;
@@ -207,6 +208,12 @@ export default function CheckoutPage() {
                 <span>小計：</span>
                 <span>NT${cartData.subtotal.toLocaleString()}</span>
               </div>
+              {(cartData.discountAmount ?? 0) > 0 && (
+                <div className="flex justify-between text-rose-600">
+                  <span>促銷折扣：</span>
+                  <span>- NT${(cartData.discountAmount ?? 0).toLocaleString()}</span>
+                </div>
+              )}
               {cartData.tax > 0 && (
                 <div className="flex justify-between text-gray-700">
                   <span>稅額：</span>
@@ -285,6 +292,11 @@ export default function CheckoutPage() {
               <li>若需申請人工退款，請先閱讀退款政策並透過客服頁提交需求。</li>
               <li>所有交易透過綠界金流處理，課程為數位內容，不涉及配送流程。</li>
             </ul>
+            {cartData.discountCode ? (
+              <p className="mt-3 text-xs font-semibold text-blue-800">
+                本次折扣來源：優惠碼 {cartData.discountCode}
+              </p>
+            ) : null}
             <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold">
               <Link href="/refund-policy" className="rounded-full bg-white px-3 py-1.5 text-blue-700">
                 退款政策

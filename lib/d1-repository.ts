@@ -4,6 +4,7 @@ import type {
   CourseFaqItem,
   CourseModule,
   CourseModuleItem,
+  CoursePriceLadder,
   CourseSalesBlock,
   CourseSyllabus,
 } from "@/types/course";
@@ -41,6 +42,19 @@ interface CourseRow {
   thumbnail: string | null;
   og_image: string | null;
   price: number;
+  original_price: number | null;
+  sales_mode: "evergreen" | "launch";
+  sales_status: "draft" | "waitlist" | "selling" | "closed";
+  launch_starts_at: string | null;
+  launch_ends_at: string | null;
+  show_countdown: number;
+  show_seats: number;
+  seat_limit: number | null;
+  sold_count_mode: "paid_orders" | "enrollments";
+  lead_magnet_enabled: number;
+  lead_magnet_title: string | null;
+  lead_magnet_description: string | null;
+  lead_magnet_coupon_code: string | null;
   category: string | null;
   level: "beginner" | "intermediate" | "advanced";
   duration: number;
@@ -80,6 +94,19 @@ interface CourseLessonRow {
   video_url: string | null;
   preview: number;
   sort_order: number;
+}
+
+interface PriceLadderRow {
+  id: string;
+  course_id: string;
+  name: string;
+  price: number;
+  starts_at: string | null;
+  ends_at: string | null;
+  seat_limit: number | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 interface EnrollmentRow {
@@ -186,6 +213,33 @@ interface SupportTicketRow {
   updated_at: string;
 }
 
+interface LeadRow {
+  id: string;
+  course_id: string;
+  email: string;
+  name: string | null;
+  source: string;
+  coupon_code: string | null;
+  status: string;
+  user_id: string | null;
+  payload_json: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface WaitlistRow {
+  id: string;
+  course_id: string;
+  email: string;
+  name: string | null;
+  source: string;
+  status: string;
+  user_id: string | null;
+  payload_json: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DiscountRecord {
   id: string;
   code: string;
@@ -214,12 +268,63 @@ export interface AnalyticsEventInput {
   payload?: Record<string, unknown>;
 }
 
+export interface LeadRecord {
+  id: string;
+  courseId: string;
+  email: string;
+  name?: string;
+  source: string;
+  couponCode?: string;
+  status: string;
+  userId?: string;
+  payload?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface WaitlistRecord {
+  id: string;
+  courseId: string;
+  email: string;
+  name?: string;
+  source: string;
+  status: string;
+  userId?: string;
+  payload?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface LeadRecordInput {
+  courseId: string;
+  email: string;
+  name?: string;
+  source: string;
+  couponCode?: string;
+  status?: string;
+  userId?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface WaitlistRecordInput {
+  courseId: string;
+  email: string;
+  name?: string;
+  source: string;
+  status?: string;
+  userId?: string;
+  payload?: Record<string, unknown>;
+}
+
 export interface CheckoutFunnelMetrics {
   purchasePageViews: number;
   discountApplied: number;
   checkoutStarted: number;
   ordersCreated: number;
   paymentsSucceeded: number;
+  leadSubmitted: number;
+  waitlistJoined: number;
+  couponPopupShown: number;
+  couponPopupClaimed: number;
+  countdownClicked: number;
 }
 
 function mapSupportTicket(row: SupportTicketRow): SupportTicket {
@@ -319,9 +424,22 @@ function buildSyllabus(modules: CourseModule[]): CourseSyllabus[] {
   );
 }
 
+function mapPriceLadderRow(row: PriceLadderRow): CoursePriceLadder {
+  return {
+    id: row.id,
+    name: row.name,
+    price: Number(row.price ?? 0),
+    startsAt: row.starts_at ?? undefined,
+    endsAt: row.ends_at ?? undefined,
+    seatLimit: typeof row.seat_limit === "number" ? row.seat_limit : undefined,
+    sortOrder: Number(row.sort_order ?? 1),
+  };
+}
+
 function mapCourseRow(
   row: CourseRow,
   modules: CourseModule[],
+  priceLadders: CoursePriceLadder[],
 ): Course {
   const syllabus = buildSyllabus(modules);
   return {
@@ -339,6 +457,7 @@ function mapCourseRow(
       bio: row.instructor_bio ?? "",
     },
     price: Number(row.price ?? 0),
+    originalPrice: typeof row.original_price === "number" ? Number(row.original_price) : undefined,
     category: row.category ?? "未分類",
     level: row.level ?? "beginner",
     duration: Number(row.duration ?? 0),
@@ -349,6 +468,19 @@ function mapCourseRow(
     modules,
     tags: parseJsonArray(row.tags_json),
     status: row.status ?? (row.published ? "published" : "draft"),
+    salesMode: row.sales_mode ?? "evergreen",
+    salesStatus: row.sales_status ?? "draft",
+    launchStartsAt: row.launch_starts_at ?? undefined,
+    launchEndsAt: row.launch_ends_at ?? undefined,
+    showCountdown: Boolean(row.show_countdown),
+    showSeats: Boolean(row.show_seats),
+    seatLimit: typeof row.seat_limit === "number" ? row.seat_limit : undefined,
+    soldCountMode: row.sold_count_mode ?? "enrollments",
+    leadMagnetEnabled: Boolean(row.lead_magnet_enabled),
+    leadMagnetTitle: row.lead_magnet_title ?? undefined,
+    leadMagnetDescription: row.lead_magnet_description ?? undefined,
+    leadMagnetCouponCode: row.lead_magnet_coupon_code ?? undefined,
+    priceLadders,
     targetAudience: parseJsonArray(row.target_audience_json),
     learningOutcomes: parseJsonArray(row.learning_outcomes_json),
     faq: parseJsonTypedArray<CourseFaqItem>(row.faq_json),
@@ -421,6 +553,26 @@ async function listCourseModules(courseIds: string[]): Promise<Map<string, Cours
   return modulesByCourse;
 }
 
+async function listCoursePriceLadders(courseIds: string[]): Promise<Map<string, CoursePriceLadder[]>> {
+  if (courseIds.length === 0) {
+    return new Map();
+  }
+
+  const placeholders = courseIds.map(() => "?").join(", ");
+  const rows = await queryD1<PriceLadderRow>(
+    `SELECT * FROM price_ladders WHERE course_id IN (${placeholders}) ORDER BY sort_order ASC, created_at ASC`,
+    courseIds,
+  );
+
+  const map = new Map<string, CoursePriceLadder[]>();
+  for (const row of rows) {
+    const items = map.get(row.course_id) ?? [];
+    items.push(mapPriceLadderRow(row));
+    map.set(row.course_id, items);
+  }
+  return map;
+}
+
 async function seedDefaultUsers(): Promise<void> {
   const now = nowIso();
   await executeD1(
@@ -466,11 +618,13 @@ async function seedMockCourses(): Promise<void> {
 
     await executeD1(
       `INSERT OR REPLACE INTO courses (
-        id, title, subtitle, slug, status, description, thumbnail, og_image, price, category, level, duration, lessons,
-        rating, students_enrolled, tags_json, instructor_id, instructor_name, instructor_avatar,
+        id, title, subtitle, slug, status, description, thumbnail, og_image, price, original_price,
+        sales_mode, sales_status, launch_starts_at, launch_ends_at, show_countdown, show_seats, seat_limit,
+        sold_count_mode, lead_magnet_enabled, lead_magnet_title, lead_magnet_description, lead_magnet_coupon_code,
+        category, level, duration, lessons, rating, students_enrolled, tags_json, instructor_id, instructor_name, instructor_avatar,
         instructor_bio, target_audience_json, learning_outcomes_json, faq_json, sales_blocks_json,
         seo_title, seo_description, published, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         course.id,
         course.title,
@@ -481,6 +635,19 @@ async function seedMockCourses(): Promise<void> {
         course.thumbnail,
         course.ogImage ?? null,
         course.price,
+        course.originalPrice ?? course.price,
+        course.salesMode ?? "evergreen",
+        course.salesStatus ?? (course.published ? "selling" : "draft"),
+        course.launchStartsAt ?? null,
+        course.launchEndsAt ?? null,
+        course.showCountdown ? 1 : 0,
+        course.showSeats ? 1 : 0,
+        course.seatLimit ?? null,
+        course.soldCountMode ?? "enrollments",
+        course.leadMagnetEnabled ? 1 : 0,
+        course.leadMagnetTitle ?? null,
+        course.leadMagnetDescription ?? null,
+        course.leadMagnetCouponCode ?? null,
         course.category,
         course.level,
         course.duration,
@@ -781,7 +948,8 @@ export async function getPublishedCoursesFromStore(): Promise<Course[]> {
     `SELECT * FROM courses WHERE published = 1 ORDER BY updated_at DESC`,
   );
   const modulesMap = await listCourseModules(rows.map((row) => row.id));
-  return rows.map((row) => mapCourseRow(row, modulesMap.get(row.id) ?? []));
+  const priceLaddersMap = await listCoursePriceLadders(rows.map((row) => row.id));
+  return rows.map((row) => mapCourseRow(row, modulesMap.get(row.id) ?? [], priceLaddersMap.get(row.id) ?? []));
 }
 
 export async function listAllCoursesFromStore(): Promise<Course[]> {
@@ -793,7 +961,8 @@ export async function listAllCoursesFromStore(): Promise<Course[]> {
 
   const rows = await listCourseRows();
   const modulesMap = await listCourseModules(rows.map((row) => row.id));
-  return rows.map((row) => mapCourseRow(row, modulesMap.get(row.id) ?? []));
+  const priceLaddersMap = await listCoursePriceLadders(rows.map((row) => row.id));
+  return rows.map((row) => mapCourseRow(row, modulesMap.get(row.id) ?? [], priceLaddersMap.get(row.id) ?? []));
 }
 
 export async function getCourseByIdFromStore(courseId: string): Promise<Course | null> {
@@ -812,7 +981,8 @@ export async function getCourseByIdFromStore(courseId: string): Promise<Course |
   }
 
   const modulesMap = await listCourseModules([courseId]);
-  return mapCourseRow(row, modulesMap.get(courseId) ?? []);
+  const priceLaddersMap = await listCoursePriceLadders([courseId]);
+  return mapCourseRow(row, modulesMap.get(courseId) ?? [], priceLaddersMap.get(courseId) ?? []);
 }
 
 export interface OrderDraftItem {
@@ -1359,6 +1529,20 @@ export async function createCourseRecord(input: {
   thumbnail?: string;
   ogImage?: string;
   price: number;
+  originalPrice?: number;
+  salesMode: "evergreen" | "launch";
+  salesStatus: "draft" | "waitlist" | "selling" | "closed";
+  launchStartsAt?: string;
+  launchEndsAt?: string;
+  showCountdown: boolean;
+  showSeats: boolean;
+  seatLimit?: number;
+  soldCountMode: "paid_orders" | "enrollments";
+  leadMagnetEnabled: boolean;
+  leadMagnetTitle?: string;
+  leadMagnetDescription?: string;
+  leadMagnetCouponCode?: string;
+  priceLadders: CoursePriceLadder[];
   category?: string;
   level: "beginner" | "intermediate" | "advanced";
   duration: number;
@@ -1381,11 +1565,13 @@ export async function createCourseRecord(input: {
   const now = nowIso();
   await executeD1(
       `INSERT INTO courses (
-      id, title, subtitle, slug, status, description, thumbnail, og_image, price, category, level, duration, lessons,
-      rating, students_enrolled, tags_json, instructor_id, instructor_name, instructor_avatar,
+      id, title, subtitle, slug, status, description, thumbnail, og_image, price, original_price,
+      sales_mode, sales_status, launch_starts_at, launch_ends_at, show_countdown, show_seats, seat_limit,
+      sold_count_mode, lead_magnet_enabled, lead_magnet_title, lead_magnet_description, lead_magnet_coupon_code,
+      category, level, duration, lessons, rating, students_enrolled, tags_json, instructor_id, instructor_name, instructor_avatar,
       instructor_bio, target_audience_json, learning_outcomes_json, faq_json, sales_blocks_json,
       seo_title, seo_description, published, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       input.title,
@@ -1396,6 +1582,19 @@ export async function createCourseRecord(input: {
       input.thumbnail ?? null,
       input.ogImage ?? null,
       input.price,
+      input.originalPrice ?? input.price,
+      input.salesMode,
+      input.salesStatus,
+      input.launchStartsAt ?? null,
+      input.launchEndsAt ?? null,
+      input.showCountdown ? 1 : 0,
+      input.showSeats ? 1 : 0,
+      input.seatLimit ?? null,
+      input.soldCountMode,
+      input.leadMagnetEnabled ? 1 : 0,
+      input.leadMagnetTitle ?? null,
+      input.leadMagnetDescription ?? null,
+      input.leadMagnetCouponCode ?? null,
       input.category ?? null,
       input.level,
       input.duration,
@@ -1419,7 +1618,32 @@ export async function createCourseRecord(input: {
     ],
   );
   await replaceCourseModules(id, input.modules);
+  await replacePriceLadders(id, input.priceLadders);
   return id;
+}
+
+export async function replacePriceLadders(courseId: string, priceLadders: CoursePriceLadder[]): Promise<void> {
+  await executeD1(`DELETE FROM price_ladders WHERE course_id = ?`, [courseId]);
+  const now = nowIso();
+  for (const ladder of priceLadders) {
+    await executeD1(
+      `INSERT INTO price_ladders (
+        id, course_id, name, price, starts_at, ends_at, seat_limit, sort_order, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        ladder.id || crypto.randomUUID(),
+        courseId,
+        ladder.name,
+        ladder.price,
+        ladder.startsAt ?? null,
+        ladder.endsAt ?? null,
+        ladder.seatLimit ?? null,
+        ladder.sortOrder,
+        now,
+        now,
+      ],
+    );
+  }
 }
 
 export async function replaceCourseModules(courseId: string, modules: CourseModule[]): Promise<void> {
@@ -1492,7 +1716,18 @@ export async function getCheckoutFunnelMetrics(days = 30): Promise<CheckoutFunne
     `SELECT event_name, COUNT(*) AS count
      FROM analytics_events
      WHERE created_at >= ?
-       AND event_name IN ('purchase_page_view', 'discount_applied', 'checkout_started', 'order_created', 'payment_succeeded')
+       AND event_name IN (
+         'purchase_page_view',
+         'lead_submitted',
+         'waitlist_joined',
+         'discount_applied',
+         'coupon_popup_shown',
+         'coupon_popup_claimed',
+         'countdown_clicked',
+         'checkout_started',
+         'order_created',
+         'payment_succeeded'
+       )
      GROUP BY event_name`,
     [startAt],
   );
@@ -1500,10 +1735,151 @@ export async function getCheckoutFunnelMetrics(days = 30): Promise<CheckoutFunne
   const counts = new Map(rows.map((row) => [row.event_name, Number(row.count ?? 0)]));
   return {
     purchasePageViews: counts.get("purchase_page_view") ?? 0,
+    leadSubmitted: counts.get("lead_submitted") ?? 0,
+    waitlistJoined: counts.get("waitlist_joined") ?? 0,
     discountApplied: counts.get("discount_applied") ?? 0,
+    couponPopupShown: counts.get("coupon_popup_shown") ?? 0,
+    couponPopupClaimed: counts.get("coupon_popup_claimed") ?? 0,
+    countdownClicked: counts.get("countdown_clicked") ?? 0,
     checkoutStarted: counts.get("checkout_started") ?? 0,
     ordersCreated: counts.get("order_created") ?? 0,
     paymentsSucceeded: counts.get("payment_succeeded") ?? 0,
+  };
+}
+
+function mapLeadRow(row: LeadRow): LeadRecord {
+  return {
+    id: row.id,
+    courseId: row.course_id,
+    email: row.email,
+    name: row.name ?? undefined,
+    source: row.source,
+    couponCode: row.coupon_code ?? undefined,
+    status: row.status,
+    userId: row.user_id ?? undefined,
+    payload: row.payload_json ? parseJsonObject(row.payload_json) : undefined,
+    createdAt: row.created_at,
+  };
+}
+
+function mapWaitlistRow(row: WaitlistRow): WaitlistRecord {
+  return {
+    id: row.id,
+    courseId: row.course_id,
+    email: row.email,
+    name: row.name ?? undefined,
+    source: row.source,
+    status: row.status,
+    userId: row.user_id ?? undefined,
+    payload: row.payload_json ? parseJsonObject(row.payload_json) : undefined,
+    createdAt: row.created_at,
+  };
+}
+
+export async function createLeadRecord(input: LeadRecordInput): Promise<LeadRecord> {
+  const id = crypto.randomUUID();
+  const now = nowIso();
+  const normalizedEmail = input.email.trim().toLowerCase();
+  await executeD1(
+    `INSERT INTO leads (
+      id, course_id, email, name, source, coupon_code, status, user_id, payload_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.courseId,
+      normalizedEmail,
+      input.name?.trim() || null,
+      input.source,
+      input.couponCode?.trim().toUpperCase() || null,
+      input.status ?? "new",
+      input.userId ?? null,
+      input.payload ? stringifyJson(input.payload) : null,
+      now,
+      now,
+    ],
+  );
+
+  return mapLeadRow({
+    id,
+    course_id: input.courseId,
+    email: normalizedEmail,
+    name: input.name?.trim() || null,
+    source: input.source,
+    coupon_code: input.couponCode?.trim().toUpperCase() || null,
+    status: input.status ?? "new",
+    user_id: input.userId ?? null,
+    payload_json: input.payload ? stringifyJson(input.payload) : null,
+    created_at: now,
+    updated_at: now,
+  });
+}
+
+export async function createWaitlistRecord(
+  input: WaitlistRecordInput,
+): Promise<WaitlistRecord> {
+  const email = input.email.trim().toLowerCase();
+  const existing = await queryFirstD1<WaitlistRow>(
+    `SELECT * FROM waitlists WHERE course_id = ? AND email = ? LIMIT 1`,
+    [input.courseId, email],
+  );
+  const now = nowIso();
+
+  if (existing) {
+    await executeD1(
+      `UPDATE waitlists
+       SET name = ?, source = ?, status = ?, user_id = ?, payload_json = ?, updated_at = ?
+       WHERE id = ?`,
+      [
+        input.name?.trim() || existing.name,
+        input.source,
+        input.status ?? existing.status,
+        input.userId ?? existing.user_id,
+        input.payload ? stringifyJson(input.payload) : existing.payload_json,
+        now,
+        existing.id,
+      ],
+    );
+
+    return mapWaitlistRow({
+      ...existing,
+      name: input.name?.trim() || existing.name,
+      source: input.source,
+      status: input.status ?? existing.status,
+      user_id: input.userId ?? existing.user_id,
+      payload_json: input.payload ? stringifyJson(input.payload) : existing.payload_json,
+      updated_at: now,
+    });
+  }
+
+  const id = crypto.randomUUID();
+  await executeD1(
+    `INSERT INTO waitlists (
+      id, course_id, email, name, source, status, user_id, payload_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.courseId,
+      email,
+      input.name?.trim() || null,
+      input.source,
+      input.status ?? "waiting",
+      input.userId ?? null,
+      input.payload ? stringifyJson(input.payload) : null,
+      now,
+      now,
+    ],
+  );
+
+  return {
+    id,
+    courseId: input.courseId,
+    email,
+    name: input.name?.trim() || undefined,
+    source: input.source,
+    status: input.status ?? "waiting",
+    userId: input.userId,
+    payload: input.payload,
+    createdAt: now,
   };
 }
 
@@ -1556,6 +1932,20 @@ export async function updateCourseRecord(input: {
   thumbnail?: string;
   ogImage?: string;
   price: number;
+  originalPrice?: number;
+  salesMode: "evergreen" | "launch";
+  salesStatus: "draft" | "waitlist" | "selling" | "closed";
+  launchStartsAt?: string;
+  launchEndsAt?: string;
+  showCountdown: boolean;
+  showSeats: boolean;
+  seatLimit?: number;
+  soldCountMode: "paid_orders" | "enrollments";
+  leadMagnetEnabled: boolean;
+  leadMagnetTitle?: string;
+  leadMagnetDescription?: string;
+  leadMagnetCouponCode?: string;
+  priceLadders: CoursePriceLadder[];
   category?: string;
   level: "beginner" | "intermediate" | "advanced";
   duration: number;
@@ -1576,8 +1966,10 @@ export async function updateCourseRecord(input: {
 }): Promise<void> {
   await executeD1(
     `UPDATE courses
-     SET title = ?, subtitle = ?, slug = ?, status = ?, description = ?, thumbnail = ?, og_image = ?, price = ?, category = ?, level = ?, duration = ?,
-         lessons = ?, tags_json = ?, published = ?, instructor_id = ?, instructor_name = ?, instructor_avatar = ?,
+     SET title = ?, subtitle = ?, slug = ?, status = ?, description = ?, thumbnail = ?, og_image = ?, price = ?, original_price = ?,
+         sales_mode = ?, sales_status = ?, launch_starts_at = ?, launch_ends_at = ?, show_countdown = ?, show_seats = ?, seat_limit = ?,
+         sold_count_mode = ?, lead_magnet_enabled = ?, lead_magnet_title = ?, lead_magnet_description = ?, lead_magnet_coupon_code = ?,
+         category = ?, level = ?, duration = ?, lessons = ?, tags_json = ?, published = ?, instructor_id = ?, instructor_name = ?, instructor_avatar = ?,
          instructor_bio = ?, target_audience_json = ?, learning_outcomes_json = ?, faq_json = ?, sales_blocks_json = ?,
          seo_title = ?, seo_description = ?, updated_at = ?
      WHERE id = ?`,
@@ -1590,6 +1982,19 @@ export async function updateCourseRecord(input: {
       input.thumbnail ?? null,
       input.ogImage ?? null,
       input.price,
+      input.originalPrice ?? input.price,
+      input.salesMode,
+      input.salesStatus,
+      input.launchStartsAt ?? null,
+      input.launchEndsAt ?? null,
+      input.showCountdown ? 1 : 0,
+      input.showSeats ? 1 : 0,
+      input.seatLimit ?? null,
+      input.soldCountMode,
+      input.leadMagnetEnabled ? 1 : 0,
+      input.leadMagnetTitle ?? null,
+      input.leadMagnetDescription ?? null,
+      input.leadMagnetCouponCode ?? null,
       input.category ?? null,
       input.level,
       input.duration,
@@ -1611,6 +2016,7 @@ export async function updateCourseRecord(input: {
     ],
   );
   await replaceCourseModules(input.id, input.modules);
+  await replacePriceLadders(input.id, input.priceLadders);
 }
 
 export async function deleteCourseRecord(courseId: string): Promise<void> {

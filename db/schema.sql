@@ -18,6 +18,19 @@ CREATE TABLE IF NOT EXISTS courses (
   thumbnail TEXT,
   og_image TEXT,
   price INTEGER NOT NULL DEFAULT 0,
+  original_price INTEGER,
+  sales_mode TEXT NOT NULL DEFAULT 'evergreen',
+  sales_status TEXT NOT NULL DEFAULT 'draft',
+  launch_starts_at TEXT,
+  launch_ends_at TEXT,
+  show_countdown INTEGER NOT NULL DEFAULT 0,
+  show_seats INTEGER NOT NULL DEFAULT 0,
+  seat_limit INTEGER,
+  sold_count_mode TEXT NOT NULL DEFAULT 'enrollments',
+  lead_magnet_enabled INTEGER NOT NULL DEFAULT 0,
+  lead_magnet_title TEXT,
+  lead_magnet_description TEXT,
+  lead_magnet_coupon_code TEXT,
   category TEXT,
   level TEXT NOT NULL DEFAULT 'beginner',
   duration REAL NOT NULL DEFAULT 0,
@@ -38,6 +51,20 @@ CREATE TABLE IF NOT EXISTS courses (
   published INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS price_ladders (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  price INTEGER NOT NULL,
+  starts_at TEXT,
+  ends_at TEXT,
+  seat_limit INTEGER,
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (course_id) REFERENCES courses(id)
 );
 
 CREATE TABLE IF NOT EXISTS course_modules (
@@ -182,8 +209,37 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS leads (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  name TEXT,
+  source TEXT NOT NULL,
+  coupon_code TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  user_id TEXT,
+  payload_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS waitlists (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  name TEXT,
+  source TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'waiting',
+  user_id TEXT,
+  payload_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_courses_published ON courses (published, updated_at);
 CREATE INDEX IF NOT EXISTS idx_courses_status ON courses (status, updated_at);
+CREATE INDEX IF NOT EXISTS idx_courses_sales_status ON courses (sales_status, updated_at);
+CREATE INDEX IF NOT EXISTS idx_price_ladders_course_sort ON price_ladders (course_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_orders_merchant_trade_no ON orders (merchant_trade_no);
 CREATE INDEX IF NOT EXISTS idx_enrollments_user_id ON enrollments (user_id, created_at);
@@ -193,3 +249,5 @@ CREATE INDEX IF NOT EXISTS idx_lesson_progress_user_course ON lesson_progress (u
 CREATE INDEX IF NOT EXISTS idx_analytics_events_name_created ON analytics_events (event_name, created_at);
 CREATE INDEX IF NOT EXISTS idx_analytics_events_course_created ON analytics_events (course_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_support_tickets_status_created ON support_tickets (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_leads_course_created ON leads (course_id, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_waitlists_course_email ON waitlists (course_id, email);
