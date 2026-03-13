@@ -10,7 +10,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "online-courses"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "d20ef7c0-07de-4e2d-8fba-6713efd83107"
 
 [vars]
 APP_BASE_URL = "https://your-domain.example.com"
