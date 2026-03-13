@@ -13,5 +13,5 @@ database_name = "online-courses"
 database_id = "d20ef7c0-07de-4e2d-8fba-6713efd83107"
 
 [vars]
-APP_BASE_URL = "https://your-domain.example.com"
+APP_BASE_URL = "https://online-courses.skypassion5000.workers.dev"
 ECPAY_CASHIER_URL = "https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5"
