@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 interface AdminShellProps {
   userName?: string | null;
@@ -95,6 +96,55 @@ export default function AdminShell({ userName, children }: AdminShellProps) {
             </nav>
           </div>
         ))}
+      </div>
+
+      <div className="border-t border-slate-800 px-4 py-5">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-lg font-bold text-blue-700">
+              {(userName || "A").slice(0, 1).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold text-white">
+                {userName || "系統管理員"}
+              </p>
+              <p className="text-sm text-slate-400">admin</p>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-2">
+            <Link
+              href="/"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+            >
+              <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 7h6m0 0v6m0-6L10 16m-4 1h5a2 2 0 002-2v-5m-7 7a2 2 0 01-2-2V8a2 2 0 012-2h5"
+                />
+              </svg>
+              前台預覽
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              登出
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
